@@ -26,6 +26,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/', 'node_modules/', '.bun/', '.svelte-kit/', '.vite/', 'drizzle/']
+    ignores: ['dist/', 'node_modules/', '.bun/', '.svelte-kit/', '.vite/', 'drizzle/'],
   }
 );

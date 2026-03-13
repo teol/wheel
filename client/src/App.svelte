@@ -356,17 +356,19 @@
 
   function shuffleSegments() {
     const segments = wheels[currentWheelIndex]?.segments;
-    if (!segments) return;
-    for (let i = segments.length - 1; i > 0; i--) {
+    if (!segments || segments.length === 0) return;
+    const shuffled = [...segments];
+    for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [segments[i], segments[j]] = [segments[j], segments[i]];
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
+    wheels[currentWheelIndex].segments = shuffled;
   }
 
   function sortSegmentsAsc() {
     const segments = wheels[currentWheelIndex]?.segments;
-    if (!segments) return;
-    segments.sort((a, b) => a.text.localeCompare(b.text));
+    if (!segments || segments.length === 0) return;
+    wheels[currentWheelIndex].segments = [...segments].sort((a, b) => a.text.localeCompare(b.text));
   }
 
   function spinWheel() {

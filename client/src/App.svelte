@@ -99,9 +99,9 @@
             (item) => item && typeof item.text === 'string' && typeof item.color === 'string'
           )
         ) {
-          // Ensure they have ids
+          // Ensure they have ids and the id is a string
           segments = parsed.map((s) => ({
-            id: s.id || crypto.randomUUID(),
+            id: typeof s.id === 'string' && s.id.trim() !== '' ? s.id : crypto.randomUUID(),
             text: s.text,
             color: s.color,
           }));
@@ -203,6 +203,14 @@
     ctx.fill();
   }
 
+  function getIndexFromRotation(rotationDegrees: number): number {
+    if (segments.length === 0) return -1;
+    const sliceAngleDeg = 360 / segments.length;
+    const normalizedRotation = rotationDegrees % 360;
+    const pointerAngle = (360 - normalizedRotation) % 360;
+    return Math.floor(pointerAngle / sliceAngleDeg);
+  }
+
   function spinWheel() {
     if (isSpinning || segments.length === 0) return;
     isSpinning = true;
@@ -213,7 +221,6 @@
     currentRotation += 1800 + randomExtraDegrees;
 
     let lastTickIndex = -1;
-    const sliceAngleDeg = 360 / segments.length;
 
     gsap.to(canvas, {
       rotation: currentRotation,
@@ -221,9 +228,7 @@
       ease: 'power4.out',
       onUpdate: () => {
         const currentAnimRotation = gsap.getProperty(canvas, 'rotation') as number;
-        const normalizedRotation = currentAnimRotation % 360;
-        const pointerAngle = (360 - normalizedRotation) % 360;
-        const currentIndex = Math.floor(pointerAngle / sliceAngleDeg);
+        const currentIndex = getIndexFromRotation(currentAnimRotation);
 
         if (lastTickIndex !== -1 && currentIndex !== lastTickIndex) {
           playTickSound();
@@ -234,17 +239,12 @@
         isSpinning = false;
         playTadaSound();
 
-        // Calculate the winner
-        const normalizedRotation = currentRotation % 360;
-        const pointerAngle = (360 - normalizedRotation) % 360;
-        const winningIndex = Math.floor(pointerAngle / sliceAngleDeg);
-
+        const winningIndex = getIndexFromRotation(currentRotation);
         winningSegment = segments[winningIndex];
         showResultModal = true;
       },
     });
   }
-
   function getNextColor() {
     const usedColors = new Set(segments.map((s) => s.color));
     const availableColor = PALETTE.find((c) => !usedColors.has(c));
@@ -275,6 +275,26 @@
       addSegment();
     }
   }
+  let closeButton = $state<HTMLButtonElement | null>(null);
+  let modalRef = $state<HTMLDivElement | null>(null);
+
+  $effect(() => {
+    if (showResultModal && closeButton) {
+      // Focus the close button when the modal opens
+      closeButton.focus();
+    }
+  });
+
+  const handleModalKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Tab') {
+      // Very simple trap since we only have the close button and the backdrop button
+      // But actually, just keeping focus inside the modal div is good
+      if (!modalRef?.contains(document.activeElement)) {
+        e.preventDefault();
+        closeButton?.focus();
+      }
+    }
+  };
 </script>
 
 <main class="min-h-screen bg-base-100 text-base-content flex flex-col items-center p-4 py-12">
@@ -352,7 +372,14 @@
 </main>
 
 {#if showResultModal}
-  <div class="modal modal-open">
+  <div
+    bind:this={modalRef}
+    class="modal modal-open"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    onkeydown={handleModalKeydown}
+  >
     <div class="modal-box text-center border-t-8 border-primary relative">
       <h3 class="font-bold text-2xl text-base-content/80 uppercase tracking-widest mb-6">
         We have a winner!
@@ -370,14 +397,19 @@
         </p>
       </div>
       <div class="modal-action justify-center mt-0">
-        <button class="btn btn-primary btn-wide font-bold" onclick={() => (showResultModal = false)}
-          >CLOSE</button
+        <button
+          bind:this={closeButton}
+          class="btn btn-primary btn-wide font-bold"
+          onclick={() => (showResultModal = false)}
         >
+          CLOSE
+        </button>
       </div>
     </div>
     <button
       class="modal-backdrop border-none bg-transparent"
       aria-label="Close modal"
+      tabindex="-1"
       onclick={() => (showResultModal = false)}
     ></button>
   </div>

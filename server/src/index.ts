@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
-import { db } from './db';
-import { logger } from './logger';
+import { db } from './db/db';
+import { logger } from './utils/logger';
 
 const fastify = Fastify({
   logger,

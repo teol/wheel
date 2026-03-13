@@ -2,7 +2,7 @@ import type { Config } from 'drizzle-kit';
 import 'dotenv/config';
 
 export default {
-  schema: './server/schema.ts',
+  schema: './server/src/db/schema.ts',
   out: './drizzle',
   dialect: 'mysql',
   dbCredentials: {

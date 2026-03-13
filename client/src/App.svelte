@@ -369,27 +369,33 @@
     currentWheelId = newWheelId;
   }
 
-  function deleteCurrentWheel() {
+  let showConfirmDeleteModal = $state(false);
+
+  function confirmDeleteCurrentWheel() {
     if (wheels.length <= 1) {
-      alert('You cannot delete the last wheel!'); // Consider replacing with a non-blocking notification
+      showToast('You cannot delete the last wheel!', 'error');
       return;
     }
-    // Consider replacing with a custom confirmation modal
-    if (confirm(`Are you sure you want to delete "${wheels[currentWheelIndex].name}"?`)) {
-      const deletedWheelName = wheels[currentWheelIndex].name;
-      const deletedWheelIndex = currentWheelIndex;
-      wheels = wheels.filter((w) => w.id !== currentWheelId);
-      const newIndex = Math.min(deletedWheelIndex, wheels.length - 1);
-      currentWheelId = wheels[newIndex].id;
+    showConfirmDeleteModal = true;
+  }
 
-      showToast(`Wheel "${deletedWheelName}" deleted`);
-    }
+  function executeDeleteWheel() {
+    const deletedWheelName = wheels[currentWheelIndex].name;
+    const deletedWheelIndex = currentWheelIndex;
+    wheels = wheels.filter((w) => w.id !== currentWheelId);
+    const newIndex = Math.min(deletedWheelIndex, wheels.length - 1);
+    currentWheelId = wheels[newIndex].id;
+
+    showToast(`Wheel "${deletedWheelName}" deleted`, 'success');
+    showConfirmDeleteModal = false;
   }
 
   let toastMessage = $state<string | null>(null);
+  let toastType = $state<'success' | 'error'>('success');
 
-  function showToast(message: string) {
+  function showToast(message: string, type: 'success' | 'error' = 'success') {
     toastMessage = message;
+    toastType = type;
     setTimeout(() => {
       if (toastMessage === message) {
         toastMessage = null;
@@ -400,18 +406,36 @@
   let closeButton = $state<HTMLButtonElement | null>(null);
   let modalRef = $state<HTMLDivElement | null>(null);
 
+  let confirmCancelButton = $state<HTMLButtonElement | null>(null);
+  let confirmModalRef = $state<HTMLDivElement | null>(null);
+
   $effect(() => {
     if (showResultModal && closeButton) {
-      // Focus the close button when the modal opens
       closeButton.focus();
+    }
+    if (showConfirmDeleteModal && confirmCancelButton) {
+      confirmCancelButton.focus();
     }
   });
 
   const handleModalKeydown = (e: KeyboardEvent) => {
     if (e.key === 'Tab') {
-      // Prevent tabbing out of the modal. Since there's only one focusable
-      // element, we can simply prevent the default tab behavior.
       e.preventDefault();
+    }
+  };
+
+  const handleConfirmModalKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Tab') {
+      // Focus trap for the confirm modal (2 buttons)
+      e.preventDefault();
+      // Simple toggle since there's only two buttons
+      if (document.activeElement === confirmCancelButton) {
+        // Find the other button (delete button)
+        const deleteBtn = confirmModalRef?.querySelector('.btn-error') as HTMLButtonElement;
+        deleteBtn?.focus();
+      } else {
+        confirmCancelButton?.focus();
+      }
     }
   };
 </script>
@@ -464,7 +488,7 @@
         </button>
         <button
           class="btn btn-square btn-outline btn-error"
-          onclick={deleteCurrentWheel}
+          onclick={confirmDeleteCurrentWheel}
           disabled={isSpinning || wheels.length <= 1}
           aria-label="Delete Wheel"
           title="Delete current wheel"
@@ -578,9 +602,46 @@
   </div>
 {/if}
 
+{#if showConfirmDeleteModal}
+  <div
+    bind:this={confirmModalRef}
+    class="modal modal-open"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    onkeydown={handleConfirmModalKeydown}
+  >
+    <div class="modal-box text-center border-t-8 border-error relative">
+      <h3 class="font-bold text-xl text-base-content mb-4">Delete Wheel?</h3>
+      <p class="py-4">
+        Are you sure you want to delete <strong class="text-error"
+          >"{wheels[currentWheelIndex]?.name}"</strong
+        >?
+        <br />This action cannot be undone.
+      </p>
+      <div class="modal-action justify-center mt-4">
+        <button
+          bind:this={confirmCancelButton}
+          class="btn btn-ghost"
+          onclick={() => (showConfirmDeleteModal = false)}
+        >
+          Cancel
+        </button>
+        <button class="btn btn-error" onclick={executeDeleteWheel}> Delete </button>
+      </div>
+    </div>
+    <button
+      class="modal-backdrop border-none bg-transparent"
+      aria-label="Close modal"
+      tabindex="-1"
+      onclick={() => (showConfirmDeleteModal = false)}
+    ></button>
+  </div>
+{/if}
+
 {#if toastMessage}
   <div class="toast toast-top toast-center z-50">
-    <div class="alert alert-success">
+    <div class="alert {toastType === 'error' ? 'alert-error' : 'alert-success'}">
       <span>{toastMessage}</span>
     </div>
   </div>

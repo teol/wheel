@@ -354,6 +354,23 @@
     spinLogs = [];
   }
 
+  function shuffleSegments() {
+    const segments = wheels[currentWheelIndex]?.segments;
+    if (!segments || segments.length === 0) return;
+    const shuffled = [...segments];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    wheels[currentWheelIndex].segments = shuffled;
+  }
+
+  function sortSegmentsAsc() {
+    const segments = wheels[currentWheelIndex]?.segments;
+    if (!segments || segments.length === 0) return;
+    wheels[currentWheelIndex].segments = [...segments].sort((a, b) => a.text.localeCompare(b.text));
+  }
+
   function spinWheel() {
     const segments = wheels[currentWheelIndex]?.segments || [];
     if (isSpinning || segments.length === 0) return;
@@ -612,6 +629,23 @@
           disabled={isSpinning}
         />
         <button class="btn btn-primary" onclick={addSegment} disabled={isSpinning}>Add</button>
+      </div>
+
+      <div class="flex gap-2 mb-3">
+        <button
+          class="btn btn-sm btn-outline flex-1"
+          onclick={shuffleSegments}
+          disabled={isSpinning}
+        >
+          🔀 Shuffle
+        </button>
+        <button
+          class="btn btn-sm btn-outline flex-1"
+          onclick={sortSegmentsAsc}
+          disabled={isSpinning}
+        >
+          🔤 Order ASC
+        </button>
       </div>
 
       <ul class="space-y-2 max-h-64 overflow-y-auto pr-2">

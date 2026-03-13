@@ -15,6 +15,38 @@
     segmentColor: string;
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function isSegment(s: any): s is Segment {
+    return (
+      s && typeof s.id === 'string' && typeof s.text === 'string' && typeof s.color === 'string'
+    );
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function isWheel(w: any): w is Wheel {
+    return (
+      w &&
+      typeof w.id === 'string' &&
+      typeof w.name === 'string' &&
+      Array.isArray(w.segments) &&
+      w.segments.every(isSegment)
+    );
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function isSpinLog(log: any): log is SpinLog {
+    return (
+      log &&
+      typeof log.id === 'string' &&
+      typeof log.timestamp === 'number' &&
+      typeof log.wheelName === 'string' &&
+      typeof log.segmentText === 'string' &&
+      typeof log.segmentColor === 'string'
+    );
+  }
+
+  const MAX_SPIN_LOGS = 50;
+
   const PALETTE = [
     '#EF4444', // Red
     '#3B82F6', // Blue
@@ -123,24 +155,7 @@
     if (savedWheels) {
       try {
         const parsed = JSON.parse(savedWheels);
-        if (
-          Array.isArray(parsed) &&
-          parsed.length > 0 &&
-          parsed.every(
-            (w) =>
-              w &&
-              typeof w.id === 'string' &&
-              typeof w.name === 'string' &&
-              Array.isArray(w.segments) &&
-              w.segments.every(
-                (s) =>
-                  s &&
-                  typeof s.id === 'string' &&
-                  typeof s.text === 'string' &&
-                  typeof s.color === 'string'
-              )
-          )
-        ) {
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isWheel)) {
           wheels = parsed;
           currentWheelId = wheels[0].id;
         }
@@ -153,18 +168,7 @@
     if (savedLogs) {
       try {
         const parsed = JSON.parse(savedLogs);
-        if (
-          Array.isArray(parsed) &&
-          parsed.every(
-            (log) =>
-              log &&
-              typeof log.id === 'string' &&
-              typeof log.timestamp === 'number' &&
-              typeof log.wheelName === 'string' &&
-              typeof log.segmentText === 'string' &&
-              typeof log.segmentColor === 'string'
-          )
-        ) {
+        if (Array.isArray(parsed) && parsed.every(isSpinLog)) {
           spinLogs = parsed;
         }
       } catch (e) {
@@ -378,7 +382,7 @@
               segmentText: winningSegment.text,
               segmentColor: winningSegment.color,
             },
-            ...spinLogs.slice(0, 49),
+            ...spinLogs.slice(0, MAX_SPIN_LOGS - 1),
           ];
         }
       },

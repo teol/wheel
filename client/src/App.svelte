@@ -120,6 +120,18 @@
         { id: crypto.randomUUID(), text: 'Ramen', color: PALETTE[4] },
       ];
     }
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showResultModal) {
+        showResultModal = false;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeydown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeydown);
+    };
   });
 
   // Save to localStorage and redraw wheel when segments change
@@ -363,8 +375,10 @@
         >
       </div>
     </div>
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="modal-backdrop" onclick={() => (showResultModal = false)}></div>
+    <button
+      class="modal-backdrop border-none bg-transparent"
+      aria-label="Close modal"
+      onclick={() => (showResultModal = false)}
+    ></button>
   </div>
 {/if}

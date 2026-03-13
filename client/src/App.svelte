@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import gsap from 'gsap';
+  import confetti from 'canvas-confetti';
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null;
@@ -374,6 +375,17 @@
         const winningIndex = getIndexFromRotation(currentRotation, segments.length);
         winningSegment = segments[winningIndex];
         showResultModal = true;
+
+        const segmentColor = winningSegment?.color ?? '#F59E0B';
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { y: 0.5 },
+          colors: [segmentColor, '#ffffff', '#FFD700'],
+          startVelocity: 45,
+          gravity: 0.9,
+          scalar: 1.1,
+        });
 
         spinLogs = [
           {

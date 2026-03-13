@@ -354,6 +354,21 @@
     spinLogs = [];
   }
 
+  function shuffleSegments() {
+    const segments = wheels[currentWheelIndex]?.segments;
+    if (!segments) return;
+    for (let i = segments.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [segments[i], segments[j]] = [segments[j], segments[i]];
+    }
+  }
+
+  function sortSegmentsAsc() {
+    const segments = wheels[currentWheelIndex]?.segments;
+    if (!segments) return;
+    segments.sort((a, b) => a.text.localeCompare(b.text));
+  }
+
   function spinWheel() {
     const segments = wheels[currentWheelIndex]?.segments || [];
     if (isSpinning || segments.length === 0) return;
@@ -612,6 +627,23 @@
           disabled={isSpinning}
         />
         <button class="btn btn-primary" onclick={addSegment} disabled={isSpinning}>Add</button>
+      </div>
+
+      <div class="flex gap-2 mb-3">
+        <button
+          class="btn btn-sm btn-outline flex-1"
+          onclick={shuffleSegments}
+          disabled={isSpinning}
+        >
+          🔀 Shuffle
+        </button>
+        <button
+          class="btn btn-sm btn-outline flex-1"
+          onclick={sortSegmentsAsc}
+          disabled={isSpinning}
+        >
+          🔤 Order ASC
+        </button>
       </div>
 
       <ul class="space-y-2 max-h-64 overflow-y-auto pr-2">

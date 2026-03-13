@@ -16,8 +16,9 @@ try {
 
   db = drizzle(pool, { schema, mode: 'default' });
   logger.info('✅ Database connected successfully');
-} catch {
+} catch (error) {
   logger.warn(
+    { err: error },
     '⚠️ Database connection failed. Running without database. User info will be saved in localStorage only.'
   );
 }

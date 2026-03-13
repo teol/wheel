@@ -23,9 +23,19 @@
     const saved = localStorage.getItem('wheel-segments');
     if (saved) {
       try {
-        segments = JSON.parse(saved);
-      } catch {
-        console.error('Error parsing segments from localStorage');
+        const parsed = JSON.parse(saved);
+        if (
+          Array.isArray(parsed) &&
+          parsed.every(
+            (item) => item && typeof item.text === 'string' && typeof item.color === 'string'
+          )
+        ) {
+          segments = parsed;
+        } else {
+          console.error('Invalid segments format in localStorage');
+        }
+      } catch (e) {
+        console.error('Error parsing segments from localStorage', e);
       }
     }
   });

@@ -168,8 +168,8 @@
     if (savedLogs) {
       try {
         const parsed = JSON.parse(savedLogs);
-        if (Array.isArray(parsed) && parsed.every(isSpinLog)) {
-          spinLogs = parsed;
+        if (Array.isArray(parsed)) {
+          spinLogs = parsed.filter(isSpinLog);
         }
       } catch (e) {
         console.error('Error parsing spin logs from localStorage', e);

@@ -3,7 +3,7 @@ import { db } from './db/db';
 import { logger } from './utils/logger';
 
 const fastify = Fastify({
-  logger,
+  loggerInstance: logger,
 });
 
 fastify.get('/api/health', async () => {

@@ -18,13 +18,13 @@
 
   onMount(() => {
     ctx = canvas.getContext('2d');
-    
+
     // Load from localStorage on mount
     const saved = localStorage.getItem('wheel-segments');
     if (saved) {
       try {
         segments = JSON.parse(saved);
-      } catch (e) {
+      } catch {
         console.error('Error parsing segments from localStorage');
       }
     }
@@ -95,7 +95,7 @@
     gsap.to(canvas, {
       rotation: '+=1440', // Spin 4 times + extra
       duration: 3,
-      ease: 'power4.out'
+      ease: 'power4.out',
     });
   }
 
@@ -104,7 +104,7 @@
       const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
       segments.push({
         text: newSegmentText.trim(),
-        color: colors[segments.length % colors.length]
+        color: colors[segments.length % colors.length],
       });
       newSegmentText = '';
     }
@@ -123,18 +123,18 @@
 
 <main class="min-h-screen bg-base-100 text-base-content flex flex-col items-center p-4 py-12">
   <h1 class="text-4xl font-bold mb-8 text-primary">Custom Wheel Creator</h1>
-  
+
   <div class="flex flex-col md:flex-row gap-12 w-full max-w-4xl justify-center items-start">
     <div class="flex flex-col items-center">
       <div class="card bg-base-200 shadow-xl p-8 mb-8">
-        <canvas 
-          bind:this={canvas} 
-          width="300" 
-          height="300" 
+        <canvas
+          bind:this={canvas}
+          width="300"
+          height="300"
           class="rounded-full shadow-2xl origin-center"
         ></canvas>
       </div>
-      
+
       <div class="flex gap-4">
         <button class="btn btn-primary" onclick={spinWheel}>Spin Wheel</button>
       </div>
@@ -142,12 +142,12 @@
 
     <div class="card bg-base-200 shadow-xl p-6 w-full max-w-sm">
       <h2 class="text-2xl font-bold mb-4">Segments</h2>
-      
+
       <div class="flex gap-2 mb-4">
-        <input 
-          type="text" 
-          bind:value={newSegmentText} 
-          placeholder="New segment..." 
+        <input
+          type="text"
+          bind:value={newSegmentText}
+          placeholder="New segment..."
           class="input input-bordered w-full"
           onkeypress={handleKeypress}
         />
@@ -155,13 +155,15 @@
       </div>
 
       <ul class="space-y-2 max-h-64 overflow-y-auto">
-        {#each segments as segment, i}
+        {#each segments as segment, i (i)}
           <li class="flex items-center justify-between bg-base-100 p-2 rounded shadow-sm">
             <div class="flex items-center gap-2">
               <div class="w-4 h-4 rounded-full" style="background-color: {segment.color};"></div>
               <span>{segment.text}</span>
             </div>
-            <button class="btn btn-ghost btn-xs text-error" onclick={() => removeSegment(i)}>✕</button>
+            <button class="btn btn-ghost btn-xs text-error" onclick={() => removeSegment(i)}
+              >✕</button
+            >
           </li>
         {/each}
         {#if segments.length === 0}

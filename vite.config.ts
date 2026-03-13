@@ -3,18 +3,15 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [
-    tailwindcss(),
-    svelte()
-  ],
+  plugins: [tailwindcss(), svelte()],
   root: 'client',
   server: {
     proxy: {
-      '/api': 'http://localhost:3000'
-    }
+      '/api': 'http://localhost:3000',
+    },
   },
   build: {
     outDir: '../dist/client',
-    emptyOutDir: true
-  }
+    emptyOutDir: true,
+  },
 });

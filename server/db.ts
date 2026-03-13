@@ -1,9 +1,9 @@
-import { drizzle } from 'drizzle-orm/mysql2';
+import { drizzle, type MySql2Database } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import * as schema from './schema';
 import 'dotenv/config';
 
-let db: ReturnType<typeof drizzle> | undefined;
+let db: (MySql2Database<typeof schema> & { $client: mysql.Connection }) | undefined;
 
 try {
   const connection = await mysql.createConnection({
@@ -15,8 +15,10 @@ try {
 
   db = drizzle(connection, { schema, mode: 'default' });
   console.log('✅ Database connected successfully');
-} catch (error) {
-  console.warn('⚠️ Database connection failed. Running without database. User info will be saved in localStorage only.');
+} catch {
+  console.warn(
+    '⚠️ Database connection failed. Running without database. User info will be saved in localStorage only.'
+  );
 }
 
 export { db };

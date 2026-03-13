@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import gsap from 'gsap';
+  import confetti from 'canvas-confetti';
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null;
@@ -48,6 +49,17 @@
 
   const MAX_SPIN_LOGS = 50;
   const CLOCK_ICON_PATH = 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z';
+
+  const CONFETTI_FALLBACK_COLOR = '#F59E0B';
+  const CONFETTI_ACCENT_COLORS = ['#ffffff', '#FFD700'];
+  const CONFETTI_CONFIG = {
+    particleCount: 150,
+    spread: 80,
+    origin: { y: 0.5 },
+    startVelocity: 45,
+    gravity: 0.9,
+    scalar: 1.1,
+  };
 
   const PALETTE = [
     '#EF4444', // Red
@@ -374,6 +386,12 @@
         const winningIndex = getIndexFromRotation(currentRotation, segments.length);
         winningSegment = segments[winningIndex];
         showResultModal = true;
+
+        const segmentColor = winningSegment?.color ?? CONFETTI_FALLBACK_COLOR;
+        confetti({
+          ...CONFETTI_CONFIG,
+          colors: [segmentColor, ...CONFETTI_ACCENT_COLORS],
+        });
 
         spinLogs = [
           {

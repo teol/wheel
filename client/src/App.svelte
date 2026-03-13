@@ -30,6 +30,61 @@
   let showResultModal = $state(false);
   let winningSegment = $state<Segment | null>(null);
 
+  // Web Audio API Context
+  let audioCtx: AudioContext | null = null;
+
+  function initAudio() {
+    if (!audioCtx) {
+      const win = window as unknown as {
+        AudioContext: typeof AudioContext;
+        webkitAudioContext: typeof AudioContext;
+      };
+      audioCtx = new (win.AudioContext || win.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  function playTickSound() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.05);
+
+    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.05);
+  }
+
+  function playTadaSound() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+    osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1);
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2);
+
+    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.6);
+
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.6);
+  }
+
   onMount(() => {
     ctx = canvas.getContext('2d');
 
@@ -139,22 +194,37 @@
   function spinWheel() {
     if (isSpinning || segments.length === 0) return;
     isSpinning = true;
+    initAudio();
 
     // Spin at least 5 times (1800 degrees) plus a random amount
     const randomExtraDegrees = Math.floor(Math.random() * 360);
     currentRotation += 1800 + randomExtraDegrees;
 
+    let lastTickIndex = -1;
+    const sliceAngleDeg = 360 / segments.length;
+
     gsap.to(canvas, {
       rotation: currentRotation,
       duration: 4,
       ease: 'power4.out',
+      onUpdate: () => {
+        const currentAnimRotation = gsap.getProperty(canvas, 'rotation') as number;
+        const normalizedRotation = currentAnimRotation % 360;
+        const pointerAngle = (360 - normalizedRotation) % 360;
+        const currentIndex = Math.floor(pointerAngle / sliceAngleDeg);
+
+        if (lastTickIndex !== -1 && currentIndex !== lastTickIndex) {
+          playTickSound();
+        }
+        lastTickIndex = currentIndex;
+      },
       onComplete: () => {
         isSpinning = false;
+        playTadaSound();
 
         // Calculate the winner
         const normalizedRotation = currentRotation % 360;
         const pointerAngle = (360 - normalizedRotation) % 360;
-        const sliceAngleDeg = 360 / segments.length;
         const winningIndex = Math.floor(pointerAngle / sliceAngleDeg);
 
         winningSegment = segments[winningIndex];

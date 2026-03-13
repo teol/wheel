@@ -15,37 +15,39 @@
     segmentColor: string;
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function isSegment(s: any): s is Segment {
+  function isSegment(s: unknown): s is Segment {
+    if (typeof s !== 'object' || s === null) return false;
+    const obj = s as Record<string, unknown>;
     return (
-      s && typeof s.id === 'string' && typeof s.text === 'string' && typeof s.color === 'string'
+      typeof obj.id === 'string' && typeof obj.text === 'string' && typeof obj.color === 'string'
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function isWheel(w: any): w is Wheel {
+  function isWheel(w: unknown): w is Wheel {
+    if (typeof w !== 'object' || w === null) return false;
+    const obj = w as Record<string, unknown>;
     return (
-      w &&
-      typeof w.id === 'string' &&
-      typeof w.name === 'string' &&
-      Array.isArray(w.segments) &&
-      w.segments.every(isSegment)
+      typeof obj.id === 'string' &&
+      typeof obj.name === 'string' &&
+      Array.isArray(obj.segments) &&
+      obj.segments.every(isSegment)
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function isSpinLog(log: any): log is SpinLog {
+  function isSpinLog(log: unknown): log is SpinLog {
+    if (typeof log !== 'object' || log === null) return false;
+    const obj = log as Record<string, unknown>;
     return (
-      log &&
-      typeof log.id === 'string' &&
-      typeof log.timestamp === 'number' &&
-      typeof log.wheelName === 'string' &&
-      typeof log.segmentText === 'string' &&
-      typeof log.segmentColor === 'string'
+      typeof obj.id === 'string' &&
+      typeof obj.timestamp === 'number' &&
+      typeof obj.wheelName === 'string' &&
+      typeof obj.segmentText === 'string' &&
+      typeof obj.segmentColor === 'string'
     );
   }
 
   const MAX_SPIN_LOGS = 50;
+  const CLOCK_ICON_PATH = 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z';
 
   const PALETTE = [
     '#EF4444', // Red
@@ -373,18 +375,16 @@
         winningSegment = segments[winningIndex];
         showResultModal = true;
 
-        if (winningSegment) {
-          spinLogs = [
-            {
-              id: crypto.randomUUID(),
-              timestamp: Date.now(),
-              wheelName: wheels[currentWheelIndex].name,
-              segmentText: winningSegment.text,
-              segmentColor: winningSegment.color,
-            },
-            ...spinLogs.slice(0, MAX_SPIN_LOGS - 1),
-          ];
-        }
+        spinLogs = [
+          {
+            id: crypto.randomUUID(),
+            timestamp: Date.now(),
+            wheelName: wheels[currentWheelIndex].name,
+            segmentText: winningSegment!.text,
+            segmentColor: winningSegment!.color,
+          },
+          ...spinLogs.slice(0, MAX_SPIN_LOGS - 1),
+        ];
       },
     });
   }
@@ -643,11 +643,7 @@
               stroke="currentColor"
               stroke-width="2"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
+              <path stroke-linecap="round" stroke-linejoin="round" d={CLOCK_ICON_PATH} />
             </svg>
             Spin History
             {#if spinLogs.length > 0}
@@ -671,11 +667,7 @@
               stroke="currentColor"
               stroke-width="1.5"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
+              <path stroke-linecap="round" stroke-linejoin="round" d={CLOCK_ICON_PATH} />
             </svg>
             <p class="text-sm">No spins yet. Spin the wheel to get started!</p>
           </div>

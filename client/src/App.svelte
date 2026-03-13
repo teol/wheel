@@ -242,11 +242,14 @@
 
   function addSegment() {
     if (newSegmentText.trim()) {
-      segments.push({
-        id: crypto.randomUUID(),
-        text: newSegmentText.trim(),
-        color: getNextColor(),
-      });
+      segments = [
+        ...segments,
+        {
+          id: crypto.randomUUID(),
+          text: newSegmentText.trim(),
+          color: getNextColor(),
+        },
+      ];
       newSegmentText = '';
     }
   }

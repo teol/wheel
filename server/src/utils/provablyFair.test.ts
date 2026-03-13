@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createHash, createHmac } from 'node:crypto';
-import {
-  generateServerSeed,
-  hashServerSeed,
-  computeResultIndex,
-  computeTargetRotation,
-} from './provablyFair.js';
+import { generateServerSeed, hashServerSeed, computeResultIndex } from './provablyFair.js';
 
 describe('generateServerSeed', () => {
   it('returns a 64-character hex string (32 bytes)', () => {
@@ -90,51 +85,5 @@ describe('computeResultIndex', () => {
 
   it('throws for totalSegments < 1', () => {
     expect(() => computeResultIndex('seed', 'client', 0, 0)).toThrow();
-  });
-});
-
-describe('computeTargetRotation', () => {
-  it('produces at least 1800 extra degrees of rotation', () => {
-    const current = 0;
-    const result = computeTargetRotation(current, 0, 5);
-    expect(result).toBeGreaterThan(current + 1800);
-  });
-
-  it('produces at least 1800 extra degrees from a non-zero current rotation', () => {
-    const current = 2124;
-    const result = computeTargetRotation(current, 2, 5);
-    expect(result).toBeGreaterThan(current + 1800);
-  });
-
-  it('lands on the correct segment for each possible index', () => {
-    const getIndexFromRotation = (deg: number, n: number) => {
-      const sliceDeg = 360 / n;
-      const norm = deg % 360;
-      return Math.floor(((360 - norm) % 360) / sliceDeg);
-    };
-
-    for (let totalSegments = 2; totalSegments <= 12; totalSegments++) {
-      for (let targetIndex = 0; targetIndex < totalSegments; targetIndex++) {
-        const rotation = computeTargetRotation(0, targetIndex, totalSegments);
-        const landed = getIndexFromRotation(rotation, totalSegments);
-        expect(landed).toBe(targetIndex);
-      }
-    }
-  });
-
-  it('works after multiple spins (non-zero current rotation)', () => {
-    const getIndexFromRotation = (deg: number, n: number) => {
-      const sliceDeg = 360 / n;
-      const norm = deg % 360;
-      return Math.floor(((360 - norm) % 360) / sliceDeg);
-    };
-
-    let current = 0;
-    const N = 6;
-    for (let i = 0; i < 20; i++) {
-      const targetIndex = i % N;
-      current = computeTargetRotation(current, targetIndex, N);
-      expect(getIndexFromRotation(current, N)).toBe(targetIndex);
-    }
   });
 });

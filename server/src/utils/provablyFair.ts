@@ -40,28 +40,3 @@ export function computeResultIndex(
   const value = parseInt(hex.slice(0, 8), 16);
   return value % totalSegments;
 }
-
-/**
- * Given a current canvas rotation (degrees) and a target segment index,
- * returns the new rotation (degrees) the canvas should animate to.
- *
- * Guarantees at least 5 full rotations (1800°) from the current position
- * and that getIndexFromRotation(result, totalSegments) === targetIndex.
- */
-export function computeTargetRotation(
-  currentRotation: number,
-  targetIndex: number,
-  totalSegments: number
-): number {
-  const sliceAngle = 360 / totalSegments;
-  // Pick the midpoint of the target segment so the pointer lands in its centre
-  // getIndexFromRotation logic: index = floor((360 - R%360)%360 / sliceAngle)
-  // Desired: (360 - R%360)%360 ≈ (targetIndex + 0.5) * sliceAngle
-  // => R%360 = (360 - (targetIndex + 0.5) * sliceAngle + 360) % 360
-  const targetMod = (360 - (targetIndex + 0.5) * sliceAngle + 360) % 360;
-  const minRotation = currentRotation + 1800; // at least 5 full extra turns
-  const fullTurns = Math.ceil((minRotation - targetMod) / 360);
-  const newRotation = fullTurns * 360 + targetMod;
-  // Safety: ensure we actually exceeded minRotation
-  return newRotation > minRotation ? newRotation : newRotation + 360;
-}

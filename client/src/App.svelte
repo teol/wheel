@@ -149,6 +149,26 @@
     return hash.slice(0, chars) + '…';
   }
 
+  /**
+   * Computes the canvas rotation (degrees) that places the pointer at the
+   * midpoint of targetIndex after at least 5 full extra rotations.
+   *
+   * getIndexFromRotation logic: index = floor((360 - R%360)%360 / sliceAngle)
+   * We want R%360 = (360 - (targetIndex + 0.5) * sliceAngle + 360) % 360
+   */
+  function computeTargetRotation(
+    curRotation: number,
+    targetIndex: number,
+    totalSegments: number
+  ): number {
+    const sliceAngle = 360 / totalSegments;
+    const targetMod = (360 - (targetIndex + 0.5) * sliceAngle + 360) % 360;
+    const minRotation = curRotation + 1800;
+    const fullTurns = Math.ceil((minRotation - targetMod) / 360);
+    const newRotation = fullTurns * 360 + targetMod;
+    return newRotation > minRotation ? newRotation : newRotation + 360;
+  }
+
   async function initProvablyFair() {
     if (pfSessionLoading) return;
     pfSessionLoading = true;
@@ -158,7 +178,8 @@
       const data = (await res.json()) as ProvablyFairSession;
       pfSession = data;
       pfServerAvailable = true;
-    } catch {
+    } catch (e) {
+      console.error('Failed to initialise provably fair session:', e);
       pfSession = null;
       pfServerAvailable = false;
     } finally {
@@ -424,24 +445,6 @@
     return Math.floor(pointerAngle / sliceAngleDeg);
   }
 
-  /**
-   * Computes the target rotation (degrees) that will make the canvas pointer
-   * land on `targetIndex` after at least 5 full extra rotations.
-   */
-  function computeTargetRotation(
-    curRotation: number,
-    targetIndex: number,
-    totalSegments: number
-  ): number {
-    const sliceAngle = 360 / totalSegments;
-    // Place pointer in the midpoint of the target segment
-    const targetMod = (360 - (targetIndex + 0.5) * sliceAngle + 360) % 360;
-    const minRotation = curRotation + 1800;
-    const fullTurns = Math.ceil((minRotation - targetMod) / 360);
-    const newRotation = fullTurns * 360 + targetMod;
-    return newRotation > minRotation ? newRotation : newRotation + 360;
-  }
-
   function formatTimestamp(ts: number): string {
     const date = new Date(ts);
     const now = new Date();
@@ -462,6 +465,23 @@
     spinLogs = [];
   }
 
+  function shuffleSegments() {
+    const segments = wheels[currentWheelIndex]?.segments;
+    if (!segments || segments.length === 0) return;
+    const shuffled = [...segments];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    wheels[currentWheelIndex].segments = shuffled;
+  }
+
+  function sortSegmentsAsc() {
+    const segments = wheels[currentWheelIndex]?.segments;
+    if (!segments || segments.length === 0) return;
+    wheels[currentWheelIndex].segments = [...segments].sort((a, b) => a.text.localeCompare(b.text));
+  }
+
   async function spinWheel() {
     const segments = wheels[currentWheelIndex]?.segments || [];
     if (isSpinning || segments.length === 0) return;
@@ -470,7 +490,7 @@
     pfVerifyResult = null;
     initAudio();
 
-    let targetRotation: number;
+    let targetRotation: number | undefined;
     let spinPfResult: ProvablyFairResult | null = null;
 
     // --- Provably Fair path ---
@@ -501,14 +521,13 @@
           resultIndex: data.resultIndex,
         };
         targetRotation = computeTargetRotation(currentRotation, data.resultIndex, segments.length);
-      } catch {
-        // Fall back to client-side random
-        spinPfResult = null;
-        const randomExtraDegrees = Math.floor(Math.random() * 360);
-        targetRotation = currentRotation + 1800 + randomExtraDegrees;
+      } catch (e) {
+        console.error('Provably fair spin failed, falling back to client-side random:', e);
       }
-    } else {
-      // No server available — use client-side random
+    }
+
+    // Fall back to client-side random if PF path failed or was not taken
+    if (targetRotation === undefined) {
       const randomExtraDegrees = Math.floor(Math.random() * 360);
       targetRotation = currentRotation + 1800 + randomExtraDegrees;
     }
@@ -553,7 +572,7 @@
             wheelName: wheels[currentWheelIndex].name,
             segmentText: winningSegment!.text,
             segmentColor: winningSegment!.color,
-            provablyFair: pfResult ?? undefined,
+            provablyFair: spinPfResult ?? undefined,
           },
           ...spinLogs.slice(0, MAX_SPIN_LOGS - 1),
         ];
@@ -819,6 +838,23 @@
           disabled={isSpinning}
         />
         <button class="btn btn-primary" onclick={addSegment} disabled={isSpinning}>Add</button>
+      </div>
+
+      <div class="flex gap-2 mb-3">
+        <button
+          class="btn btn-sm btn-outline flex-1"
+          onclick={shuffleSegments}
+          disabled={isSpinning}
+        >
+          🔀 Shuffle
+        </button>
+        <button
+          class="btn btn-sm btn-outline flex-1"
+          onclick={sortSegmentsAsc}
+          disabled={isSpinning}
+        >
+          🔤 Order ASC
+        </button>
       </div>
 
       <ul class="space-y-2 max-h-64 overflow-y-auto pr-2">

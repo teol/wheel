@@ -17,7 +17,9 @@ type Session = {
 
 const sessions = new Map<string, Session>();
 
-// Purge stale sessions every 10 minutes
+// Purge stale sessions every 10 minutes.
+// .unref() lets the process exit cleanly if this timer is the only thing
+// left in the event loop (i.e. during graceful shutdown).
 const SESSION_TTL_MS = 30 * 60 * 1000;
 setInterval(
   () => {
@@ -27,7 +29,7 @@ setInterval(
     }
   },
   10 * 60 * 1000
-);
+).unref();
 
 // ---------------------------------------------------------------------------
 // Request / response types
@@ -83,41 +85,47 @@ export async function provablyFairRoutes(fastify: FastifyInstance) {
    *   the winning segment index deterministically.
    * - Reveals the serverSeed so the client (and anyone) can verify the result.
    */
-  fastify.post<{ Body: SpinBody }>('/api/provably-fair/spin', async (request, reply) => {
-    const { sessionId, clientSeed, totalSegments } = request.body ?? {};
+  fastify.post<{ Body: SpinBody }>(
+    '/api/provably-fair/spin',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['sessionId', 'clientSeed', 'totalSegments'],
+          properties: {
+            sessionId: { type: 'string', minLength: 1 },
+            clientSeed: { type: 'string', minLength: 1 },
+            totalSegments: { type: 'integer', minimum: 1 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { sessionId, clientSeed, totalSegments } = request.body;
 
-    if (!sessionId || typeof sessionId !== 'string') {
-      return reply.status(400).send({ error: 'Missing or invalid sessionId' });
-    }
-    if (!clientSeed || typeof clientSeed !== 'string') {
-      return reply.status(400).send({ error: 'Missing or invalid clientSeed' });
-    }
-    if (typeof totalSegments !== 'number' || totalSegments < 1) {
-      return reply.status(400).send({ error: 'Invalid totalSegments' });
-    }
+      const session = sessions.get(sessionId);
+      if (!session) {
+        return reply.status(404).send({ error: 'Session not found or expired' });
+      }
+      if (session.used) {
+        return reply.status(409).send({ error: 'Session already used' });
+      }
 
-    const session = sessions.get(sessionId);
-    if (!session) {
-      return reply.status(404).send({ error: 'Session not found or expired' });
+      const { serverSeed, serverSeedHash, nonce } = session;
+      const resultIndex = computeResultIndex(serverSeed, clientSeed, nonce, totalSegments);
+
+      // Mark session as consumed
+      session.used = true;
+
+      return {
+        resultIndex,
+        serverSeed, // Revealed — user can now verify SHA256(serverSeed) === serverSeedHash
+        serverSeedHash,
+        clientSeed,
+        nonce,
+      };
     }
-    if (session.used) {
-      return reply.status(409).send({ error: 'Session already used' });
-    }
-
-    const { serverSeed, serverSeedHash, nonce } = session;
-    const resultIndex = computeResultIndex(serverSeed, clientSeed, nonce, totalSegments);
-
-    // Mark session as consumed
-    session.used = true;
-
-    return {
-      resultIndex,
-      serverSeed, // Revealed — user can now verify SHA256(serverSeed) === serverSeedHash
-      serverSeedHash,
-      clientSeed,
-      nonce,
-    };
-  });
+  );
 
   /**
    * POST /api/provably-fair/verify
@@ -125,33 +133,47 @@ export async function provablyFairRoutes(fastify: FastifyInstance) {
    * Stateless verification endpoint. Given all the public parameters of a
    * past spin, recomputes the expected result and confirms it matches.
    */
-  fastify.post<{ Body: VerifyBody }>('/api/provably-fair/verify', async (request, reply) => {
-    const { serverSeed, serverSeedHash, clientSeed, nonce, resultIndex, totalSegments } =
-      request.body ?? {};
+  fastify.post<{ Body: VerifyBody }>(
+    '/api/provably-fair/verify',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: [
+            'serverSeed',
+            'serverSeedHash',
+            'clientSeed',
+            'nonce',
+            'resultIndex',
+            'totalSegments',
+          ],
+          properties: {
+            serverSeed: { type: 'string', minLength: 1 },
+            serverSeedHash: { type: 'string', minLength: 1 },
+            clientSeed: { type: 'string', minLength: 1 },
+            nonce: { type: 'integer', minimum: 0 },
+            resultIndex: { type: 'integer', minimum: 0 },
+            totalSegments: { type: 'integer', minimum: 1 },
+          },
+        },
+      },
+    },
+    async (request) => {
+      const { serverSeed, serverSeedHash, clientSeed, nonce, resultIndex, totalSegments } =
+        request.body;
 
-    if (
-      !serverSeed ||
-      !serverSeedHash ||
-      !clientSeed ||
-      typeof nonce !== 'number' ||
-      typeof resultIndex !== 'number' ||
-      typeof totalSegments !== 'number' ||
-      totalSegments < 1
-    ) {
-      return reply.status(400).send({ error: 'Missing or invalid fields' });
+      const computedHash = hashServerSeed(serverSeed);
+      const hashValid = computedHash === serverSeedHash;
+      const expectedIndex = computeResultIndex(serverSeed, clientSeed, nonce, totalSegments);
+      const resultValid = expectedIndex === resultIndex;
+
+      return {
+        valid: hashValid && resultValid,
+        hashValid,
+        resultValid,
+        expectedIndex,
+        computedHash,
+      };
     }
-
-    const computedHash = hashServerSeed(serverSeed);
-    const hashValid = computedHash === serverSeedHash;
-    const expectedIndex = computeResultIndex(serverSeed, clientSeed, nonce, totalSegments);
-    const resultValid = expectedIndex === resultIndex;
-
-    return {
-      valid: hashValid && resultValid,
-      hashValid,
-      resultValid,
-      expectedIndex,
-      computedHash,
-    };
-  });
+  );
 }

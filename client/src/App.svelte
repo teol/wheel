@@ -114,7 +114,24 @@
     if (savedWheels) {
       try {
         const parsed = JSON.parse(savedWheels);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (
+          Array.isArray(parsed) &&
+          parsed.length > 0 &&
+          parsed.every(
+            (w) =>
+              w &&
+              typeof w.id === 'string' &&
+              typeof w.name === 'string' &&
+              Array.isArray(w.segments) &&
+              w.segments.every(
+                (s) =>
+                  s &&
+                  typeof s.id === 'string' &&
+                  typeof s.text === 'string' &&
+                  typeof s.color === 'string'
+              )
+          )
+        ) {
           wheels = parsed;
           currentWheelId = wheels[0].id;
         }
@@ -354,13 +371,30 @@
 
   function deleteCurrentWheel() {
     if (wheels.length <= 1) {
-      alert('You cannot delete the last wheel!');
+      alert('You cannot delete the last wheel!'); // Consider replacing with a non-blocking notification
       return;
     }
+    // Consider replacing with a custom confirmation modal
     if (confirm(`Are you sure you want to delete "${wheels[currentWheelIndex].name}"?`)) {
+      const deletedWheelName = wheels[currentWheelIndex].name;
+      const deletedWheelIndex = currentWheelIndex;
       wheels = wheels.filter((w) => w.id !== currentWheelId);
-      currentWheelId = wheels[0].id;
+      const newIndex = Math.min(deletedWheelIndex, wheels.length - 1);
+      currentWheelId = wheels[newIndex].id;
+
+      showToast(`Wheel "${deletedWheelName}" deleted`);
     }
+  }
+
+  let toastMessage = $state<string | null>(null);
+
+  function showToast(message: string) {
+    toastMessage = message;
+    setTimeout(() => {
+      if (toastMessage === message) {
+        toastMessage = null;
+      }
+    }, 3000);
   }
 
   let closeButton = $state<HTMLButtonElement | null>(null);
@@ -541,5 +575,13 @@
       tabindex="-1"
       onclick={() => (showResultModal = false)}
     ></button>
+  </div>
+{/if}
+
+{#if toastMessage}
+  <div class="toast toast-top toast-center z-50">
+    <div class="alert alert-success">
+      <span>{toastMessage}</span>
+    </div>
   </div>
 {/if}

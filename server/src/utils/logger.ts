@@ -17,5 +17,5 @@ const envToLogger: Record<string, pino.LoggerOptions> = {
 };
 
 export const logger = pino(
-  envToLogger[process.env.NODE_ENV === 'production' ? 'production' : 'development'] || {}
+  envToLogger[process.env.NODE_ENV as keyof typeof envToLogger] || envToLogger.development
 );

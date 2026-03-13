@@ -7,14 +7,14 @@ import 'dotenv/config';
 let db: (MySql2Database<typeof schema> & { $client: mysql.Connection }) | undefined;
 
 try {
-  const connection = await mysql.createConnection({
+  const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'wheel_db',
   });
 
-  db = drizzle(connection, { schema, mode: 'default' });
+  db = drizzle(pool, { schema, mode: 'default' });
   logger.info('✅ Database connected successfully');
 } catch {
   logger.warn(

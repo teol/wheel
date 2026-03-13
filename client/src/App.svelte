@@ -153,7 +153,18 @@
     if (savedLogs) {
       try {
         const parsed = JSON.parse(savedLogs);
-        if (Array.isArray(parsed)) {
+        if (
+          Array.isArray(parsed) &&
+          parsed.every(
+            (log) =>
+              log &&
+              typeof log.id === 'string' &&
+              typeof log.timestamp === 'number' &&
+              typeof log.wheelName === 'string' &&
+              typeof log.segmentText === 'string' &&
+              typeof log.segmentColor === 'string'
+          )
+        ) {
           spinLogs = parsed;
         }
       } catch (e) {
@@ -309,7 +320,9 @@
     const date = new Date(ts);
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
-    const isYesterday = new Date(now.getTime() - 86400000).toDateString() === date.toDateString();
+    const isYesterday =
+      new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toDateString() ===
+      date.toDateString();
     const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     if (isToday) return `Today at ${time}`;
     if (isYesterday) return `Yesterday at ${time}`;

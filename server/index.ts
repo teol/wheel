@@ -1,7 +1,7 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyServerOptions } from 'fastify';
 import { db } from './db';
 
-const envToLogger = {
+const envToLogger: Record<string, FastifyServerOptions['logger']> = {
   development: {
     transport: {
       target: 'pino-pretty',
@@ -16,10 +16,10 @@ const envToLogger = {
 };
 
 const fastify = Fastify({
-  logger: envToLogger[process.env.NODE_ENV === 'production' ? 'production' : 'development'] as any,
+  logger: envToLogger[process.env.NODE_ENV === 'production' ? 'production' : 'development'],
 });
 
-fastify.get('/api/health', async (request, reply) => {
+fastify.get('/api/health', async () => {
   return { status: 'ok', db: !!db };
 });
 

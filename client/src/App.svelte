@@ -287,12 +287,9 @@
 
   const handleModalKeydown = (e: KeyboardEvent) => {
     if (e.key === 'Tab') {
-      // Very simple trap since we only have the close button and the backdrop button
-      // But actually, just keeping focus inside the modal div is good
-      if (!modalRef?.contains(document.activeElement)) {
-        e.preventDefault();
-        closeButton?.focus();
-      }
+      // Prevent tabbing out of the modal. Since there's only one focusable
+      // element, we can simply prevent the default tab behavior.
+      e.preventDefault();
     }
   };
 </script>

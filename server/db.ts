@@ -1,6 +1,7 @@
 import { drizzle, type MySql2Database } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import * as schema from './schema';
+import { logger } from './logger';
 import 'dotenv/config';
 
 let db: (MySql2Database<typeof schema> & { $client: mysql.Connection }) | undefined;
@@ -14,9 +15,9 @@ try {
   });
 
   db = drizzle(connection, { schema, mode: 'default' });
-  console.log('✅ Database connected successfully');
+  logger.info('✅ Database connected successfully');
 } catch {
-  console.warn(
+  logger.warn(
     '⚠️ Database connection failed. Running without database. User info will be saved in localStorage only.'
   );
 }

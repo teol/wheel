@@ -7,6 +7,47 @@
 
   type Segment = { id: string; text: string; color: string };
   type Wheel = { id: string; name: string; segments: Segment[] };
+  type SpinLog = {
+    id: string;
+    timestamp: number;
+    wheelName: string;
+    segmentText: string;
+    segmentColor: string;
+  };
+
+  function isSegment(s: unknown): s is Segment {
+    if (typeof s !== 'object' || s === null) return false;
+    const obj = s as Record<string, unknown>;
+    return (
+      typeof obj.id === 'string' && typeof obj.text === 'string' && typeof obj.color === 'string'
+    );
+  }
+
+  function isWheel(w: unknown): w is Wheel {
+    if (typeof w !== 'object' || w === null) return false;
+    const obj = w as Record<string, unknown>;
+    return (
+      typeof obj.id === 'string' &&
+      typeof obj.name === 'string' &&
+      Array.isArray(obj.segments) &&
+      obj.segments.every(isSegment)
+    );
+  }
+
+  function isSpinLog(log: unknown): log is SpinLog {
+    if (typeof log !== 'object' || log === null) return false;
+    const obj = log as Record<string, unknown>;
+    return (
+      typeof obj.id === 'string' &&
+      typeof obj.timestamp === 'number' &&
+      typeof obj.wheelName === 'string' &&
+      typeof obj.segmentText === 'string' &&
+      typeof obj.segmentColor === 'string'
+    );
+  }
+
+  const MAX_SPIN_LOGS = 50;
+  const CLOCK_ICON_PATH = 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z';
 
   const PALETTE = [
     '#EF4444', // Red
@@ -51,6 +92,8 @@
   let isSpinning = $state(false);
   let showResultModal = $state(false);
   let winningSegment = $state<Segment | null>(null);
+
+  let spinLogs = $state<SpinLog[]>([]);
 
   // Web Audio API Context
   let audioCtx: AudioContext | null = null;
@@ -114,29 +157,24 @@
     if (savedWheels) {
       try {
         const parsed = JSON.parse(savedWheels);
-        if (
-          Array.isArray(parsed) &&
-          parsed.length > 0 &&
-          parsed.every(
-            (w) =>
-              w &&
-              typeof w.id === 'string' &&
-              typeof w.name === 'string' &&
-              Array.isArray(w.segments) &&
-              w.segments.every(
-                (s) =>
-                  s &&
-                  typeof s.id === 'string' &&
-                  typeof s.text === 'string' &&
-                  typeof s.color === 'string'
-              )
-          )
-        ) {
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(isWheel)) {
           wheels = parsed;
           currentWheelId = wheels[0].id;
         }
       } catch (e) {
         console.error('Error parsing wheels from localStorage', e);
+      }
+    }
+
+    const savedLogs = localStorage.getItem('wheel-spin-logs');
+    if (savedLogs) {
+      try {
+        const parsed = JSON.parse(savedLogs);
+        if (Array.isArray(parsed)) {
+          spinLogs = parsed.filter(isSpinLog);
+        }
+      } catch (e) {
+        console.error('Error parsing spin logs from localStorage', e);
       }
     }
 
@@ -195,6 +233,10 @@
     return () => {
       window.removeEventListener('keydown', handleKeydown);
     };
+  });
+
+  $effect(() => {
+    localStorage.setItem('wheel-spin-logs', JSON.stringify(spinLogs));
   });
 
   $effect(() => {
@@ -280,6 +322,26 @@
     return Math.floor(pointerAngle / sliceAngleDeg);
   }
 
+  function formatTimestamp(ts: number): string {
+    const date = new Date(ts);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const isYesterday =
+      new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toDateString() ===
+      date.toDateString();
+    const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (isToday) return `Today at ${time}`;
+    if (isYesterday) return `Yesterday at ${time}`;
+    return (
+      date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) +
+      ` at ${time}`
+    );
+  }
+
+  function clearLogs() {
+    spinLogs = [];
+  }
+
   function spinWheel() {
     const segments = wheels[currentWheelIndex]?.segments || [];
     if (isSpinning || segments.length === 0) return;
@@ -312,6 +374,17 @@
         const winningIndex = getIndexFromRotation(currentRotation, segments.length);
         winningSegment = segments[winningIndex];
         showResultModal = true;
+
+        spinLogs = [
+          {
+            id: crypto.randomUUID(),
+            timestamp: Date.now(),
+            wheelName: wheels[currentWheelIndex].name,
+            segmentText: winningSegment!.text,
+            segmentColor: winningSegment!.color,
+          },
+          ...spinLogs.slice(0, MAX_SPIN_LOGS - 1),
+        ];
       },
     });
   }
@@ -554,6 +627,87 @@
           {/if}
         {/if}
       </ul>
+    </div>
+  </div>
+
+  <div class="w-full max-w-4xl mt-10">
+    <div class="card bg-base-200 shadow-xl">
+      <div class="card-body p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="card-title text-lg font-bold gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5 text-primary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d={CLOCK_ICON_PATH} />
+            </svg>
+            Spin History
+            {#if spinLogs.length > 0}
+              <span class="badge badge-primary badge-sm">{spinLogs.length}</span>
+            {/if}
+          </h2>
+          {#if spinLogs.length > 0}
+            <button class="btn btn-ghost btn-xs text-base-content/50" onclick={clearLogs}>
+              Clear
+            </button>
+          {/if}
+        </div>
+
+        {#if spinLogs.length === 0}
+          <div class="flex flex-col items-center justify-center py-10 text-base-content/30 gap-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-10 w-10"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d={CLOCK_ICON_PATH} />
+            </svg>
+            <p class="text-sm">No spins yet. Spin the wheel to get started!</p>
+          </div>
+        {:else}
+          <div class="overflow-x-auto">
+            <table class="table table-sm">
+              <thead>
+                <tr class="text-base-content/50 text-xs uppercase tracking-wider">
+                  <th>#</th>
+                  <th>Result</th>
+                  <th>Wheel</th>
+                  <th class="text-right">When</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each spinLogs as log, i (log.id)}
+                  <tr class="hover">
+                    <td class="text-base-content/30 text-xs font-mono w-8">{i + 1}</td>
+                    <td>
+                      <div class="flex items-center gap-2">
+                        <span
+                          class="inline-block w-3 h-3 rounded-full flex-shrink-0"
+                          style="background-color: {log.segmentColor};"
+                        ></span>
+                        <span class="font-semibold">{log.segmentText}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge badge-ghost badge-sm">{log.wheelName}</span>
+                    </td>
+                    <td class="text-right text-base-content/50 text-xs whitespace-nowrap">
+                      {formatTimestamp(log.timestamp)}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {/if}
+      </div>
     </div>
   </div>
 </main>

@@ -6,6 +6,7 @@
   let ctx: CanvasRenderingContext2D | null;
 
   type Segment = { id: string; text: string; color: string };
+  type Wheel = { id: string; name: string; segments: Segment[] };
 
   const PALETTE = [
     '#EF4444', // Red
@@ -20,9 +21,30 @@
     '#6366F1', // Indigo
     '#D946EF', // Fuchsia
     '#0EA5E9', // Sky
+    '#F97316', // Orange
+    '#06B6D4', // Cyan
+    '#EAB308', // Yellow
+    '#A855F7', // Purple
+    '#34D399', // Emerald lighter
+    '#FB923C', // Orange lighter
+    '#2DD4BF', // Teal lighter
+    '#FBBF24', // Amber lighter
+    '#C084FC', // Purple lighter
+    '#F472B6', // Pink lighter
+    '#4ADE80', // Green lighter
+    '#38BDF8', // Cyan lighter
   ];
 
-  let segments = $state<Segment[]>([]);
+  let wheels = $state<Wheel[]>([]);
+  let currentWheelId = $state<string>('');
+
+  let currentWheelIndex = $derived(
+    Math.max(
+      0,
+      wheels.findIndex((w) => w.id === currentWheelId)
+    )
+  );
+
   let newSegmentText = $state('');
 
   let currentRotation = $state(0);
@@ -88,37 +110,61 @@
   onMount(() => {
     ctx = canvas.getContext('2d');
 
-    // Load from localStorage on mount
-    const saved = localStorage.getItem('wheel-segments');
-    if (saved) {
+    const savedWheels = localStorage.getItem('wheels-data');
+    if (savedWheels) {
       try {
-        const parsed = JSON.parse(saved);
-        if (
-          Array.isArray(parsed) &&
-          parsed.every(
-            (item) => item && typeof item.text === 'string' && typeof item.color === 'string'
-          )
-        ) {
-          // Ensure they have ids and the id is a string
-          segments = parsed.map((s) => ({
-            id: typeof s.id === 'string' && s.id.trim() !== '' ? s.id : crypto.randomUUID(),
-            text: s.text,
-            color: s.color,
-          }));
+        const parsed = JSON.parse(savedWheels);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          wheels = parsed;
+          currentWheelId = wheels[0].id;
         }
       } catch (e) {
-        console.error('Error parsing segments from localStorage', e);
+        console.error('Error parsing wheels from localStorage', e);
       }
     }
 
-    if (segments.length === 0) {
-      segments = [
-        { id: crypto.randomUUID(), text: 'Pizza', color: PALETTE[0] },
-        { id: crypto.randomUUID(), text: 'Burger', color: PALETTE[1] },
-        { id: crypto.randomUUID(), text: 'Sushi', color: PALETTE[2] },
-        { id: crypto.randomUUID(), text: 'Pasta', color: PALETTE[3] },
-        { id: crypto.randomUUID(), text: 'Ramen', color: PALETTE[4] },
-      ];
+    if (wheels.length === 0) {
+      // Migrate legacy segments if any
+      const savedSegments = localStorage.getItem('wheel-segments');
+      let legacySegments: Segment[] = [];
+      if (savedSegments) {
+        try {
+          const parsed = JSON.parse(savedSegments);
+          if (
+            Array.isArray(parsed) &&
+            parsed.every(
+              (item) => item && typeof item.text === 'string' && typeof item.color === 'string'
+            )
+          ) {
+            legacySegments = parsed.map((s) => ({
+              id: typeof s.id === 'string' && s.id.trim() !== '' ? s.id : crypto.randomUUID(),
+              text: s.text,
+              color: s.color,
+            }));
+          }
+        } catch (e) {
+          console.error('Error parsing legacy segments', e);
+        }
+      }
+
+      if (legacySegments.length > 0) {
+        wheels = [{ id: crypto.randomUUID(), name: 'My First Wheel', segments: legacySegments }];
+      } else {
+        wheels = [
+          {
+            id: crypto.randomUUID(),
+            name: 'Food Wheel',
+            segments: [
+              { id: crypto.randomUUID(), text: 'Pizza', color: PALETTE[0] },
+              { id: crypto.randomUUID(), text: 'Burger', color: PALETTE[1] },
+              { id: crypto.randomUUID(), text: 'Sushi', color: PALETTE[2] },
+              { id: crypto.randomUUID(), text: 'Pasta', color: PALETTE[3] },
+              { id: crypto.randomUUID(), text: 'Ramen', color: PALETTE[4] },
+            ],
+          },
+        ];
+      }
+      currentWheelId = wheels[0].id;
     }
 
     const handleKeydown = (e: KeyboardEvent) => {
@@ -134,9 +180,13 @@
     };
   });
 
-  // Save to localStorage and redraw wheel when segments change
   $effect(() => {
-    localStorage.setItem('wheel-segments', JSON.stringify(segments));
+    if (wheels.length > 0) {
+      localStorage.setItem('wheels-data', JSON.stringify(wheels));
+    }
+    // Dependency to trigger draw on changes
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _currentWheel = wheels[currentWheelIndex];
     drawWheel();
   });
 
@@ -148,6 +198,8 @@
     const radius = 140;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const segments = wheels[currentWheelIndex]?.segments || [];
 
     if (segments.length === 0) {
       // Draw empty wheel
@@ -203,15 +255,16 @@
     ctx.fill();
   }
 
-  function getIndexFromRotation(rotationDegrees: number): number {
-    if (segments.length === 0) return -1;
-    const sliceAngleDeg = 360 / segments.length;
+  function getIndexFromRotation(rotationDegrees: number, totalSegments: number): number {
+    if (totalSegments === 0) return -1;
+    const sliceAngleDeg = 360 / totalSegments;
     const normalizedRotation = rotationDegrees % 360;
     const pointerAngle = (360 - normalizedRotation) % 360;
     return Math.floor(pointerAngle / sliceAngleDeg);
   }
 
   function spinWheel() {
+    const segments = wheels[currentWheelIndex]?.segments || [];
     if (isSpinning || segments.length === 0) return;
     isSpinning = true;
     initAudio();
@@ -228,7 +281,7 @@
       ease: 'power4.out',
       onUpdate: () => {
         const currentAnimRotation = gsap.getProperty(canvas, 'rotation') as number;
-        const currentIndex = getIndexFromRotation(currentAnimRotation);
+        const currentIndex = getIndexFromRotation(currentAnimRotation, segments.length);
 
         if (lastTickIndex !== -1 && currentIndex !== lastTickIndex) {
           playTickSound();
@@ -239,13 +292,15 @@
         isSpinning = false;
         playTadaSound();
 
-        const winningIndex = getIndexFromRotation(currentRotation);
+        const winningIndex = getIndexFromRotation(currentRotation, segments.length);
         winningSegment = segments[winningIndex];
         showResultModal = true;
       },
     });
   }
+
   function getNextColor() {
+    const segments = wheels[currentWheelIndex]?.segments || [];
     const usedColors = new Set(segments.map((s) => s.color));
     const availableColor = PALETTE.find((c) => !usedColors.has(c));
     if (availableColor) return availableColor;
@@ -253,9 +308,9 @@
   }
 
   function addSegment() {
-    if (newSegmentText.trim()) {
-      segments = [
-        ...segments,
+    if (newSegmentText.trim() && wheels[currentWheelIndex]) {
+      wheels[currentWheelIndex].segments = [
+        ...wheels[currentWheelIndex].segments,
         {
           id: crypto.randomUUID(),
           text: newSegmentText.trim(),
@@ -267,7 +322,11 @@
   }
 
   function removeSegment(id: string) {
-    segments = segments.filter((s) => s.id !== id);
+    if (wheels[currentWheelIndex]) {
+      wheels[currentWheelIndex].segments = wheels[currentWheelIndex].segments.filter(
+        (s) => s.id !== id
+      );
+    }
   }
 
   function handleKeypress(e: KeyboardEvent) {
@@ -275,6 +334,35 @@
       addSegment();
     }
   }
+
+  function createNewWheel() {
+    const newWheelId = crypto.randomUUID();
+    wheels = [
+      ...wheels,
+      {
+        id: newWheelId,
+        name: `Wheel #${wheels.length + 1}`,
+        segments: [
+          { id: crypto.randomUUID(), text: 'Option 1', color: PALETTE[0] },
+          { id: crypto.randomUUID(), text: 'Option 2', color: PALETTE[1] },
+          { id: crypto.randomUUID(), text: 'Option 3', color: PALETTE[2] },
+        ],
+      },
+    ];
+    currentWheelId = newWheelId;
+  }
+
+  function deleteCurrentWheel() {
+    if (wheels.length <= 1) {
+      alert('You cannot delete the last wheel!');
+      return;
+    }
+    if (confirm(`Are you sure you want to delete "${wheels[currentWheelIndex].name}"?`)) {
+      wheels = wheels.filter((w) => w.id !== currentWheelId);
+      currentWheelId = wheels[0].id;
+    }
+  }
+
   let closeButton = $state<HTMLButtonElement | null>(null);
   let modalRef = $state<HTMLDivElement | null>(null);
 
@@ -321,7 +409,49 @@
     </div>
 
     <div class="card bg-base-200 shadow-xl p-6 w-full max-w-sm">
-      <h2 class="text-2xl font-bold mb-4">Edit Options</h2>
+      <div class="flex items-center gap-2 mb-4">
+        <select
+          class="select select-bordered flex-1"
+          bind:value={currentWheelId}
+          disabled={isSpinning}
+        >
+          {#each wheels as wheel (wheel.id)}
+            <option value={wheel.id}>{wheel.name}</option>
+          {/each}
+        </select>
+        <button
+          class="btn btn-square btn-outline btn-primary"
+          onclick={createNewWheel}
+          disabled={isSpinning}
+          aria-label="New Wheel"
+          title="Create new wheel"
+        >
+          +
+        </button>
+        <button
+          class="btn btn-square btn-outline btn-error"
+          onclick={deleteCurrentWheel}
+          disabled={isSpinning || wheels.length <= 1}
+          aria-label="Delete Wheel"
+          title="Delete current wheel"
+        >
+          ✕
+        </button>
+      </div>
+
+      {#if wheels[currentWheelIndex]}
+        <div class="mb-6">
+          <input
+            type="text"
+            class="input input-bordered w-full font-bold text-lg"
+            bind:value={wheels[currentWheelIndex].name}
+            disabled={isSpinning}
+            placeholder="Wheel Name"
+          />
+        </div>
+      {/if}
+
+      <h2 class="text-xl font-bold mb-4">Edit Options</h2>
 
       <div class="flex gap-2 mb-6">
         <input
@@ -335,33 +465,35 @@
         <button class="btn btn-primary" onclick={addSegment} disabled={isSpinning}>Add</button>
       </div>
 
-      <ul class="space-y-2 max-h-80 overflow-y-auto pr-2">
-        {#each segments as segment (segment.id)}
-          <li class="flex items-center justify-between bg-base-100 p-2 rounded shadow-sm gap-2">
-            <div class="flex items-center gap-3 flex-1">
-              <input
-                type="color"
-                bind:value={segment.color}
-                class="w-8 h-8 rounded cursor-pointer border-0 p-0 bg-transparent"
+      <ul class="space-y-2 max-h-64 overflow-y-auto pr-2">
+        {#if wheels[currentWheelIndex]}
+          {#each wheels[currentWheelIndex].segments as segment (segment.id)}
+            <li class="flex items-center justify-between bg-base-100 p-2 rounded shadow-sm gap-2">
+              <div class="flex items-center gap-3 flex-1">
+                <input
+                  type="color"
+                  bind:value={segment.color}
+                  class="w-8 h-8 rounded cursor-pointer border-0 p-0 bg-transparent"
+                  disabled={isSpinning}
+                />
+                <input
+                  type="text"
+                  bind:value={segment.text}
+                  class="input input-sm input-ghost flex-1 w-full font-medium"
+                  disabled={isSpinning}
+                />
+              </div>
+              <button
+                class="btn btn-ghost btn-xs text-error ml-2"
+                onclick={() => removeSegment(segment.id)}
                 disabled={isSpinning}
-              />
-              <input
-                type="text"
-                bind:value={segment.text}
-                class="input input-sm input-ghost flex-1 w-full font-medium"
-                disabled={isSpinning}
-              />
-            </div>
-            <button
-              class="btn btn-ghost btn-xs text-error ml-2"
-              onclick={() => removeSegment(segment.id)}
-              disabled={isSpinning}
-              aria-label="Remove">✕</button
-            >
-          </li>
-        {/each}
-        {#if segments.length === 0}
-          <li class="text-base-content/50 text-center py-4">No options added yet.</li>
+                aria-label="Remove">✕</button
+              >
+            </li>
+          {/each}
+          {#if wheels[currentWheelIndex].segments.length === 0}
+            <li class="text-base-content/50 text-center py-4">No options added yet.</li>
+          {/if}
         {/if}
       </ul>
     </div>

@@ -8,7 +8,7 @@
     "dev": "bun run dev:server & bun run dev:client",
     "build": "vite build && bun build server/src/index.ts --target bun --outfile dist/server.js",
     "start": "NODE_ENV=production bun run dist/server.js",
-    "test": "vitest --passWithNoTests",
+    "test": "vitest --config vitest.config.ts --passWithNoTests",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "lint": "eslint .",

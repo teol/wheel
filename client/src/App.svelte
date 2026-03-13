@@ -14,6 +14,21 @@
     wheelName: string;
     segmentText: string;
     segmentColor: string;
+    provablyFair?: ProvablyFairResult;
+  };
+
+  type ProvablyFairSession = {
+    sessionId: string;
+    serverSeedHash: string;
+    nonce: number;
+  };
+
+  type ProvablyFairResult = {
+    serverSeed: string;
+    serverSeedHash: string;
+    clientSeed: string;
+    nonce: number;
+    resultIndex: number;
   };
 
   function isSegment(s: unknown): s is Segment {
@@ -107,8 +122,80 @@
 
   let spinLogs = $state<SpinLog[]>([]);
 
+  // Provably Fair state
+  let pfSession = $state<ProvablyFairSession | null>(null);
+  let pfSessionLoading = $state(false);
+  let pfResult = $state<ProvablyFairResult | null>(null);
+  let pfServerAvailable = $state(true);
+  let showPfDetails = $state(false);
+  let pfVerifyResult = $state<{
+    valid: boolean;
+    hashValid: boolean;
+    resultValid: boolean;
+  } | null>(null);
+  let pfVerifying = $state(false);
+  let pfClientSeed = $state(generateClientSeed());
+
   // Web Audio API Context
   let audioCtx: AudioContext | null = null;
+
+  function generateClientSeed(): string {
+    return Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  function truncateHash(hash: string, chars = 16): string {
+    return hash.slice(0, chars) + '…';
+  }
+
+  async function initProvablyFair() {
+    if (pfSessionLoading) return;
+    pfSessionLoading = true;
+    try {
+      const res = await fetch('/api/provably-fair/init', { method: 'POST' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as ProvablyFairSession;
+      pfSession = data;
+      pfServerAvailable = true;
+    } catch {
+      pfSession = null;
+      pfServerAvailable = false;
+    } finally {
+      pfSessionLoading = false;
+    }
+  }
+
+  async function verifyPfResult() {
+    if (!pfResult) return;
+    pfVerifying = true;
+    pfVerifyResult = null;
+    try {
+      const segments = wheels[currentWheelIndex]?.segments ?? [];
+      const res = await fetch('/api/provably-fair/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serverSeed: pfResult.serverSeed,
+          serverSeedHash: pfResult.serverSeedHash,
+          clientSeed: pfResult.clientSeed,
+          nonce: pfResult.nonce,
+          resultIndex: pfResult.resultIndex,
+          totalSegments: segments.length,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      pfVerifyResult = (await res.json()) as {
+        valid: boolean;
+        hashValid: boolean;
+        resultValid: boolean;
+      };
+    } catch {
+      pfVerifyResult = { valid: false, hashValid: false, resultValid: false };
+    } finally {
+      pfVerifying = false;
+    }
+  }
 
   function initAudio() {
     if (!audioCtx) {
@@ -242,6 +329,9 @@
 
     window.addEventListener('keydown', handleKeydown);
 
+    // Pre-fetch initial provably fair session
+    initProvablyFair();
+
     return () => {
       window.removeEventListener('keydown', handleKeydown);
     };
@@ -334,6 +424,24 @@
     return Math.floor(pointerAngle / sliceAngleDeg);
   }
 
+  /**
+   * Computes the target rotation (degrees) that will make the canvas pointer
+   * land on `targetIndex` after at least 5 full extra rotations.
+   */
+  function computeTargetRotation(
+    curRotation: number,
+    targetIndex: number,
+    totalSegments: number
+  ): number {
+    const sliceAngle = 360 / totalSegments;
+    // Place pointer in the midpoint of the target segment
+    const targetMod = (360 - (targetIndex + 0.5) * sliceAngle + 360) % 360;
+    const minRotation = curRotation + 1800;
+    const fullTurns = Math.ceil((minRotation - targetMod) / 360);
+    const newRotation = fullTurns * 360 + targetMod;
+    return newRotation > minRotation ? newRotation : newRotation + 360;
+  }
+
   function formatTimestamp(ts: number): string {
     const date = new Date(ts);
     const now = new Date();
@@ -354,15 +462,58 @@
     spinLogs = [];
   }
 
-  function spinWheel() {
+  async function spinWheel() {
     const segments = wheels[currentWheelIndex]?.segments || [];
     if (isSpinning || segments.length === 0) return;
     isSpinning = true;
+    pfResult = null;
+    pfVerifyResult = null;
     initAudio();
 
-    // Spin at least 5 times (1800 degrees) plus a random amount
-    const randomExtraDegrees = Math.floor(Math.random() * 360);
-    currentRotation += 1800 + randomExtraDegrees;
+    let targetRotation: number;
+    let spinPfResult: ProvablyFairResult | null = null;
+
+    // --- Provably Fair path ---
+    if (pfSession && pfServerAvailable) {
+      try {
+        const res = await fetch('/api/provably-fair/spin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: pfSession.sessionId,
+            clientSeed: pfClientSeed,
+            totalSegments: segments.length,
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as {
+          resultIndex: number;
+          serverSeed: string;
+          serverSeedHash: string;
+          clientSeed: string;
+          nonce: number;
+        };
+        spinPfResult = {
+          serverSeed: data.serverSeed,
+          serverSeedHash: data.serverSeedHash,
+          clientSeed: data.clientSeed,
+          nonce: data.nonce,
+          resultIndex: data.resultIndex,
+        };
+        targetRotation = computeTargetRotation(currentRotation, data.resultIndex, segments.length);
+      } catch {
+        // Fall back to client-side random
+        spinPfResult = null;
+        const randomExtraDegrees = Math.floor(Math.random() * 360);
+        targetRotation = currentRotation + 1800 + randomExtraDegrees;
+      }
+    } else {
+      // No server available — use client-side random
+      const randomExtraDegrees = Math.floor(Math.random() * 360);
+      targetRotation = currentRotation + 1800 + randomExtraDegrees;
+    }
+
+    currentRotation = targetRotation;
 
     let lastTickIndex = -1;
 
@@ -385,6 +536,8 @@
 
         const winningIndex = getIndexFromRotation(currentRotation, segments.length);
         winningSegment = segments[winningIndex];
+        pfResult = spinPfResult;
+        showPfDetails = false;
         showResultModal = true;
 
         const segmentColor = winningSegment?.color ?? CONFETTI_FALLBACK_COLOR;
@@ -400,9 +553,14 @@
             wheelName: wheels[currentWheelIndex].name,
             segmentText: winningSegment!.text,
             segmentColor: winningSegment!.color,
+            provablyFair: pfResult ?? undefined,
           },
           ...spinLogs.slice(0, MAX_SPIN_LOGS - 1),
         ];
+
+        // Pre-fetch next session and rotate client seed
+        pfClientSeed = generateClientSeed();
+        initProvablyFair();
       },
     });
   }
@@ -550,10 +708,59 @@
         ></canvas>
       </div>
 
-      <div class="flex gap-4">
+      <div class="flex flex-col items-center gap-3">
         <button class="btn btn-primary btn-lg font-bold" onclick={spinWheel} disabled={isSpinning}>
           {isSpinning ? 'Spinning...' : 'SPIN THE WHEEL!'}
         </button>
+
+        <!-- Provably Fair badge -->
+        <div class="flex items-center gap-2 text-xs text-base-content/50">
+          {#if pfServerAvailable}
+            <span
+              class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-success/10 text-success border border-success/20 font-mono"
+              title="Server seed hash committed before this spin"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3 w-3"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              Provably Fair
+            </span>
+            {#if pfSession}
+              <span class="font-mono opacity-60" title="SHA-256 hash of the server seed">
+                {truncateHash(pfSession.serverSeedHash)}
+              </span>
+            {:else if pfSessionLoading}
+              <span class="loading loading-dots loading-xs"></span>
+            {/if}
+          {:else}
+            <span
+              class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-warning/10 text-warning border border-warning/20"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3 w-3"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              Server offline — client random
+            </span>
+          {/if}
+        </div>
       </div>
     </div>
 
@@ -645,6 +852,23 @@
           {/if}
         {/if}
       </ul>
+
+      <!-- Client seed display -->
+      {#if pfServerAvailable}
+        <div class="mt-6 pt-4 border-t border-base-300">
+          <p class="text-xs text-base-content/50 mb-1 font-semibold uppercase tracking-wide">
+            Your Client Seed
+          </p>
+          <p class="font-mono text-xs text-base-content/70 break-all">{pfClientSeed}</p>
+          <button
+            class="btn btn-ghost btn-xs mt-1 text-base-content/40"
+            onclick={() => (pfClientSeed = generateClientSeed())}
+            disabled={isSpinning}
+          >
+            Regenerate
+          </button>
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -697,6 +921,7 @@
                   <th>#</th>
                   <th>Result</th>
                   <th>Wheel</th>
+                  <th>Fair</th>
                   <th class="text-right">When</th>
                 </tr>
               </thead>
@@ -715,6 +940,26 @@
                     </td>
                     <td>
                       <span class="badge badge-ghost badge-sm">{log.wheelName}</span>
+                    </td>
+                    <td>
+                      {#if log.provablyFair}
+                        <span class="text-success" title="Provably fair spin">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>
+                        </span>
+                      {:else}
+                        <span class="text-base-content/20" title="Client-side random">—</span>
+                      {/if}
                     </td>
                     <td class="text-right text-base-content/50 text-xs whitespace-nowrap">
                       {formatTimestamp(log.timestamp)}
@@ -739,7 +984,7 @@
     tabindex="-1"
     onkeydown={handleModalKeydown}
   >
-    <div class="modal-box text-center border-t-8 border-primary relative">
+    <div class="modal-box text-center border-t-8 border-primary relative max-w-lg">
       <h3 class="font-bold text-2xl text-base-content/80 uppercase tracking-widest mb-6">
         We have a winner!
       </h3>
@@ -755,6 +1000,104 @@
           {winningSegment?.text}
         </p>
       </div>
+
+      <!-- Provably Fair verification section -->
+      {#if pfResult}
+        <div class="mb-6 text-left">
+          <button
+            class="flex items-center gap-2 w-full text-sm font-semibold text-success mb-2"
+            onclick={() => (showPfDetails = !showPfDetails)}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Provably Fair
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4 ml-auto transition-transform {showPfDetails ? 'rotate-180' : ''}"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+
+          {#if showPfDetails}
+            <div class="bg-base-300 rounded-box p-4 text-xs font-mono space-y-3">
+              <div>
+                <p class="text-base-content/50 font-sans font-semibold mb-1">
+                  Server Seed (revealed)
+                </p>
+                <p class="break-all text-base-content/80">{pfResult.serverSeed}</p>
+              </div>
+              <div>
+                <p class="text-base-content/50 font-sans font-semibold mb-1">
+                  Server Seed Hash (SHA-256)
+                </p>
+                <p class="break-all text-base-content/60">{pfResult.serverSeedHash}</p>
+              </div>
+              <div>
+                <p class="text-base-content/50 font-sans font-semibold mb-1">Client Seed</p>
+                <p class="break-all text-base-content/80">{pfResult.clientSeed}</p>
+              </div>
+              <div>
+                <p class="text-base-content/50 font-sans font-semibold mb-1">Nonce</p>
+                <p>{pfResult.nonce}</p>
+              </div>
+              <div class="pt-2 border-t border-base-content/10">
+                <p class="font-sans text-base-content/50 text-xs mb-2">
+                  Verify: <span class="text-base-content/70"
+                    >HMAC-SHA256(serverSeed, clientSeed:nonce) mod segments → index {pfResult.resultIndex}</span
+                  >
+                </p>
+                <button
+                  class="btn btn-xs btn-outline btn-success gap-1 font-sans"
+                  onclick={verifyPfResult}
+                  disabled={pfVerifying}
+                >
+                  {#if pfVerifying}
+                    <span class="loading loading-spinner loading-xs"></span>
+                  {:else}
+                    Verify on server
+                  {/if}
+                </button>
+
+                {#if pfVerifyResult !== null}
+                  <div
+                    class="mt-2 p-2 rounded font-sans {pfVerifyResult.valid
+                      ? 'bg-success/10 text-success'
+                      : 'bg-error/10 text-error'}"
+                  >
+                    {#if pfVerifyResult.valid}
+                      Result verified — this spin is provably fair.
+                    {:else}
+                      Verification failed.
+                      {#if !pfVerifyResult.hashValid}Hash mismatch.{/if}
+                      {#if !pfVerifyResult.resultValid}Result mismatch.{/if}
+                    {/if}
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {/if}
+        </div>
+      {/if}
+
       <div class="modal-action justify-center mt-0">
         <button
           bind:this={closeButton}

@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import { db } from './db/db';
 import { logger } from './utils/logger';
+import { provablyFairRoutes } from './routes/provablyFair.js';
 
 const fastify = Fastify({
   loggerInstance: logger,
@@ -9,6 +10,8 @@ const fastify = Fastify({
 fastify.get('/api/health', async () => {
   return { status: 'ok', db: !!db };
 });
+
+await fastify.register(provablyFairRoutes);
 
 const start = async () => {
   try {

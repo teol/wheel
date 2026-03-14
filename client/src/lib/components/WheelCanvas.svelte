@@ -76,9 +76,6 @@
     if (canvasElement) {
       ctx = canvasElement.getContext('2d');
     }
-    // Re-draw whenever segments change
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _seg = segments;
     drawWheel();
   });
 </script>

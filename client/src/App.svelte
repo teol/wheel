@@ -247,7 +247,7 @@
     showConfirmDeleteModal = false;
   }
 
-  onMount(() => {
+  function loadInitialState() {
     const savedWheels = localStorage.getItem('wheels-data');
     if (savedWheels) {
       try {
@@ -313,13 +313,20 @@
       }
       currentWheelId = wheels[0].id;
     }
+  }
+
+  onMount(() => {
+    loadInitialState();
 
     const handleKeydown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && showResultModal) showResultModal = false;
     };
     window.addEventListener('keydown', handleKeydown);
     initProvablyFair();
-    return () => window.removeEventListener('keydown', handleKeydown);
+    return () => {
+      window.removeEventListener('keydown', handleKeydown);
+      clearTimeout(toastTimeoutId);
+    };
   });
 
   $effect(() => {

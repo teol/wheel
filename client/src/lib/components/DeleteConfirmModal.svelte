@@ -22,7 +22,7 @@
     if (e.key === 'Tab') {
       e.preventDefault();
       if (document.activeElement === confirmCancelButton) {
-        const deleteBtn = confirmModalRef?.querySelector('.btn-error') as HTMLButtonElement;
+        const deleteBtn = confirmModalRef?.querySelector<HTMLButtonElement>('.btn-error');
         deleteBtn?.focus();
       } else {
         confirmCancelButton?.focus();

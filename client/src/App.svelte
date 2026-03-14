@@ -121,7 +121,7 @@
 
   async function spinWheel() {
     const segments = wheels[currentWheelIndex]?.segments || [];
-    if (isSpinning || segments.length === 0) return;
+    if (isSpinning || segments.length === 0 || !canvasEl) return;
     isSpinning = true;
     pfResult = null;
     pfVerifyResult = null;

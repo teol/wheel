@@ -211,7 +211,8 @@
         hashValid: boolean;
         resultValid: boolean;
       };
-    } catch {
+    } catch (e) {
+      console.error('Failed to verify provably fair result:', e);
       pfVerifyResult = { valid: false, hashValid: false, resultValid: false };
     } finally {
       pfVerifying = false;

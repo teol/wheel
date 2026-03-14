@@ -1,8 +1,14 @@
 import { defineConfig } from 'vitest/config';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 export default defineConfig({
+  plugins: [svelte()],
+  resolve: {
+    conditions: ['browser'],
+  },
   test: {
-    include: ['server/**/*.test.ts'],
+    include: ['server/**/*.test.ts', 'client/**/*.test.ts'],
     environment: 'node',
+    setupFiles: ['./client/src/test-setup.ts'],
   },
 });

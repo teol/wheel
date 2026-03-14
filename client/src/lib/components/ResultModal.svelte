@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Segment, ProvablyFairResult, VerifyResult } from '../types.js';
+  import { trapFocus } from '$lib/actions/trapFocus.js';
 
   let {
     winningSegment,
@@ -25,33 +26,9 @@
       closeButton.focus();
     }
   });
-
-  const handleKeydown = (e: KeyboardEvent) => {
-    if (e.key !== 'Tab') return;
-    const modal = e.currentTarget as HTMLElement;
-    e.preventDefault();
-    const focusableElements = Array.from(
-      modal.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      )
-    ).filter(
-      (el) => !el.hasAttribute('disabled') && !el.classList.contains('modal-backdrop')
-    ) as HTMLElement[];
-    if (focusableElements.length === 0) return;
-    const currentIndex = focusableElements.indexOf(document.activeElement as HTMLElement);
-    const nextIndex =
-      (currentIndex + (e.shiftKey ? -1 : 1) + focusableElements.length) % focusableElements.length;
-    focusableElements[nextIndex]?.focus();
-  };
 </script>
 
-<div
-  class="modal modal-open"
-  role="dialog"
-  aria-modal="true"
-  tabindex="-1"
-  onkeydown={handleKeydown}
->
+<div class="modal modal-open" role="dialog" aria-modal="true" tabindex="-1" use:trapFocus>
   <div class="modal-box text-center border-t-8 border-primary relative max-w-lg">
     <h3 class="font-bold text-2xl text-base-content/80 uppercase tracking-widest mb-6">
       We have a winner!

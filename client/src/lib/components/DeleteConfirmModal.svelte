@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { trapFocus } from '$lib/actions/trapFocus.js';
+
   let {
     wheelName,
     onconfirm,
@@ -10,34 +12,15 @@
   } = $props();
 
   let confirmCancelButton = $state<HTMLButtonElement | null>(null);
-  let confirmModalRef = $state<HTMLDivElement | null>(null);
 
   $effect(() => {
     if (confirmCancelButton) {
       confirmCancelButton.focus();
     }
   });
-
-  const handleKeydown = (e: KeyboardEvent) => {
-    if (e.key !== 'Tab' || !confirmModalRef) return;
-    e.preventDefault();
-    const focusable = Array.from(
-      confirmModalRef.querySelectorAll('.modal-box button:not([disabled])')
-    ) as HTMLElement[];
-    const currentIndex = focusable.indexOf(document.activeElement as HTMLElement);
-    const nextIndex = (currentIndex + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length;
-    focusable[nextIndex]?.focus();
-  };
 </script>
 
-<div
-  bind:this={confirmModalRef}
-  class="modal modal-open"
-  role="dialog"
-  aria-modal="true"
-  tabindex="-1"
-  onkeydown={handleKeydown}
->
+<div class="modal modal-open" role="dialog" aria-modal="true" tabindex="-1" use:trapFocus>
   <div class="modal-box text-center border-t-8 border-error relative">
     <h3 class="font-bold text-xl text-base-content mb-4">Delete Wheel?</h3>
     <p class="py-4">

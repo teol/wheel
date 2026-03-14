@@ -27,9 +27,21 @@
   });
 
   const handleKeydown = (e: KeyboardEvent) => {
-    if (e.key === 'Tab') {
-      e.preventDefault();
-    }
+    if (e.key !== 'Tab') return;
+    const modal = e.currentTarget as HTMLElement;
+    e.preventDefault();
+    const focusableElements = Array.from(
+      modal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter(
+      (el) => !el.hasAttribute('disabled') && !el.classList.contains('modal-backdrop')
+    ) as HTMLElement[];
+    if (focusableElements.length === 0) return;
+    const currentIndex = focusableElements.indexOf(document.activeElement as HTMLElement);
+    const nextIndex =
+      (currentIndex + (e.shiftKey ? -1 : 1) + focusableElements.length) % focusableElements.length;
+    focusableElements[nextIndex]?.focus();
   };
 </script>
 

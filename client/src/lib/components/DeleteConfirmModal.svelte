@@ -19,15 +19,14 @@
   });
 
   const handleKeydown = (e: KeyboardEvent) => {
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      if (document.activeElement === confirmCancelButton) {
-        const deleteBtn = confirmModalRef?.querySelector<HTMLButtonElement>('.btn-error');
-        deleteBtn?.focus();
-      } else {
-        confirmCancelButton?.focus();
-      }
-    }
+    if (e.key !== 'Tab' || !confirmModalRef) return;
+    e.preventDefault();
+    const focusable = Array.from(
+      confirmModalRef.querySelectorAll('button:not([disabled])')
+    ) as HTMLElement[];
+    const currentIndex = focusable.indexOf(document.activeElement as HTMLElement);
+    const nextIndex = (currentIndex + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length;
+    focusable[nextIndex]?.focus();
   };
 </script>
 

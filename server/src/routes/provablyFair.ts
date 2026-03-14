@@ -111,11 +111,11 @@ export async function provablyFairRoutes(fastify: FastifyInstance) {
         return reply.status(409).send({ error: 'Session already used' });
       }
 
+      // Mark session as consumed immediately to prevent race conditions.
+      session.used = true;
+
       const { serverSeed, serverSeedHash, nonce } = session;
       const resultIndex = computeResultIndex(serverSeed, clientSeed, nonce, totalSegments);
-
-      // Mark session as consumed
-      session.used = true;
 
       return {
         resultIndex,

@@ -61,14 +61,16 @@
   // Toast state
   let toastMessage = $state<string | null>(null);
   let toastType = $state<'success' | 'error'>('success');
+  let toastTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
   let showConfirmDeleteModal = $state(false);
 
   function showToast(message: string, type: 'success' | 'error' = 'success') {
+    clearTimeout(toastTimeoutId);
     toastMessage = message;
     toastType = type;
-    setTimeout(() => {
-      if (toastMessage === message) toastMessage = null;
+    toastTimeoutId = setTimeout(() => {
+      toastMessage = null;
     }, 3000);
   }
 

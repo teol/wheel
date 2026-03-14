@@ -2,8 +2,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import ResultModal from './ResultModal.svelte';
-import type { Segment, ProvablyFairResult } from '../types.js';
+import ResultModal from '../../src/lib/components/ResultModal.svelte';
+import type { Segment, ProvablyFairResult } from '../../src/lib/types.js';
 
 const winningSegment: Segment = { id: '1', text: 'Pizza', color: '#EF4444' };
 

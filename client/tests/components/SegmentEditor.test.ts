@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import SegmentEditorTestHarness from './SegmentEditorTestHarness.svelte';
-import type { Wheel } from '../types.js';
+import type { Wheel } from '../../src/lib/types.js';
 
 const makeWheel = (segmentTexts: string[] = ['Pizza', 'Burger', 'Sushi']): Wheel => ({
   id: 'wheel-1',

@@ -7,8 +7,8 @@ export default defineConfig({
     conditions: ['browser'],
   },
   test: {
-    include: ['server/**/*.test.ts', 'client/**/*.test.ts'],
+    include: ['server/tests/**/*.test.ts', 'client/tests/**/*.test.ts'],
     environment: 'node',
-    setupFiles: ['./client/src/test-setup.ts'],
+    setupFiles: ['./client/tests/setup.ts'],
   },
 });

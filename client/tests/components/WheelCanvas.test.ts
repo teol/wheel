@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/svelte';
-import WheelCanvas from './WheelCanvas.svelte';
+import WheelCanvas from '../../src/lib/components/WheelCanvas.svelte';
 
 describe('WheelCanvas', () => {
   it('renders a <canvas> element', () => {

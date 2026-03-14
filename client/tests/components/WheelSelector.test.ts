@@ -2,8 +2,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import WheelSelector from './WheelSelector.svelte';
-import type { Wheel } from '../types.js';
+import WheelSelector from '../../src/lib/components/WheelSelector.svelte';
+import type { Wheel } from '../../src/lib/types.js';
 
 const makeWheels = (n: number): Wheel[] =>
   Array.from({ length: n }, (_, i) => ({

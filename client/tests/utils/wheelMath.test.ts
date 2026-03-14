@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getIndexFromRotation, computeTargetRotation } from './wheelMath.js';
+import { getIndexFromRotation, computeTargetRotation } from '../../src/lib/utils/wheelMath.js';
 
 // ---------------------------------------------------------------------------
 // getIndexFromRotation

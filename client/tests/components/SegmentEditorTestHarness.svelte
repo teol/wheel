@@ -1,6 +1,6 @@
 <script lang="ts">
-  import SegmentEditor from './SegmentEditor.svelte';
-  import type { Wheel } from '../types.js';
+  import SegmentEditor from '../../src/lib/components/SegmentEditor.svelte';
+  import type { Wheel } from '../../src/lib/types.js';
 
   let {
     initialWheel,

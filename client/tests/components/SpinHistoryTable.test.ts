@@ -2,8 +2,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import SpinHistoryTable from './SpinHistoryTable.svelte';
-import type { SpinLog } from '../types.js';
+import SpinHistoryTable from '../../src/lib/components/SpinHistoryTable.svelte';
+import type { SpinLog } from '../../src/lib/types.js';
 
 const makeLog = (overrides: Partial<SpinLog> = {}): SpinLog => ({
   id: crypto.randomUUID(),

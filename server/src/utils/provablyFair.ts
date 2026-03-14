@@ -36,7 +36,9 @@ export function computeResultIndex(
   const hmac = createHmac('sha256', serverSeed);
   hmac.update(`${clientSeed}:${nonce}`);
   const hex = hmac.digest('hex');
-  // First 4 bytes → 32-bit unsigned integer, then mod to get segment index
+  // First 4 bytes → 32-bit unsigned integer, scaled to [0, totalSegments)
+  // Dividing by 2**32 converts to a float in [0, 1) before scaling, which
+  // avoids the modulo bias that would occur with a direct % operation.
   const value = parseInt(hex.slice(0, 8), 16);
-  return value % totalSegments;
+  return Math.floor((value / 2 ** 32) * totalSegments);
 }

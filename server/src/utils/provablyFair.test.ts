@@ -78,7 +78,7 @@ describe('computeResultIndex', () => {
     const hmac = createHmac('sha256', serverSeed);
     hmac.update(`${clientSeed}:${nonce}`);
     const hex = hmac.digest('hex');
-    const expected = parseInt(hex.slice(0, 8), 16) % totalSegments;
+    const expected = Math.floor((parseInt(hex.slice(0, 8), 16) / 2 ** 32) * totalSegments);
 
     expect(computeResultIndex(serverSeed, clientSeed, nonce, totalSegments)).toBe(expected);
   });

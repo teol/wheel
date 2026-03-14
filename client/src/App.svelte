@@ -130,8 +130,9 @@
   let showPfDetails = $state(false);
   let pfVerifyResult = $state<{
     valid: boolean;
-    hashValid: boolean;
-    resultValid: boolean;
+    hashValid?: boolean;
+    resultValid?: boolean;
+    error?: string;
   } | null>(null);
   let pfVerifying = $state(false);
   let pfClientSeed = $state(generateClientSeed());
@@ -213,7 +214,7 @@
       };
     } catch (e) {
       console.error('Failed to verify provably fair result:', e);
-      pfVerifyResult = { valid: false, hashValid: false, resultValid: false };
+      pfVerifyResult = { valid: false, error: 'Verification request failed.' };
     } finally {
       pfVerifying = false;
     }
@@ -524,6 +525,7 @@
         targetRotation = computeTargetRotation(currentRotation, data.resultIndex, segments.length);
       } catch (e) {
         console.error('Provably fair spin failed, falling back to client-side random:', e);
+        showToast('Provably fair spin failed. Result uses client-side randomness.', 'error');
       }
     }
 
@@ -1122,6 +1124,8 @@
                   >
                     {#if pfVerifyResult.valid}
                       Result verified — this spin is provably fair.
+                    {:else if pfVerifyResult.error}
+                      {pfVerifyResult.error}
                     {:else}
                       Verification failed.
                       {#if !pfVerifyResult.hashValid}Hash mismatch.{/if}

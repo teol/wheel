@@ -6,7 +6,7 @@ export function trapFocus(node: HTMLElement) {
       node.querySelectorAll(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       )
-    ).filter((el) => !el.hasAttribute('disabled')) as HTMLElement[];
+    ).filter((el) => !el.hasAttribute('disabled') && (el as HTMLElement).offsetParent !== null) as HTMLElement[];
     if (focusableElements.length === 0) return;
     const currentIndex = focusableElements.indexOf(document.activeElement as HTMLElement);
     const nextIndex =

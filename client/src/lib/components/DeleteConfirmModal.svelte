@@ -22,7 +22,7 @@
     if (e.key !== 'Tab' || !confirmModalRef) return;
     e.preventDefault();
     const focusable = Array.from(
-      confirmModalRef.querySelectorAll('button:not([disabled])')
+      confirmModalRef.querySelectorAll('.modal-box button:not([disabled])')
     ) as HTMLElement[];
     const currentIndex = focusable.indexOf(document.activeElement as HTMLElement);
     const nextIndex = (currentIndex + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length;

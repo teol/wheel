@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { createHash, createHmac } from 'node:crypto';
-import { generateServerSeed, hashServerSeed, computeResultIndex } from './provablyFair.js';
+import {
+  generateServerSeed,
+  hashServerSeed,
+  computeResultIndex,
+} from '../src/utils/provablyFair.js';
 
 describe('generateServerSeed', () => {
   it('returns a 64-character hex string (32 bytes)', () => {

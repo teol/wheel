@@ -338,28 +338,39 @@
   });
 </script>
 
-<main class="min-h-screen bg-base-100 text-base-content flex flex-col items-center p-4 py-12">
-  <h1 class="text-4xl font-bold mb-8 text-primary">Custom Wheel Creator</h1>
+<main
+  class="relative z-10 min-h-screen text-base-content flex flex-col items-center px-4 pt-10 pb-20"
+>
+  <!-- Header -->
+  <header class="w-full max-w-4xl mb-10">
+    <p class="label-section mb-2">★ fortune wheel</p>
+    <h1
+      class="text-5xl md:text-6xl font-extrabold leading-[1.05] tracking-tight"
+      style="font-family: var(--font-display);"
+    >
+      Spin your<br /><span class="text-primary">fate.</span>
+    </h1>
+    <div class="divider-thin mt-6"></div>
+  </header>
 
-  <div class="flex flex-col md:flex-row gap-12 w-full max-w-4xl justify-center items-start">
-    <div class="flex flex-col items-center">
+  <!-- Main layout -->
+  <div class="flex flex-col md:flex-row gap-8 w-full max-w-4xl justify-center items-start">
+    <!-- Left: Wheel + Spin -->
+    <div class="flex flex-col items-center gap-5">
       <WheelCanvas
         segments={wheels[currentWheelIndex]?.segments ?? []}
         bind:canvasElement={canvasEl}
       />
 
       <div class="flex flex-col items-center gap-3">
-        <button class="btn btn-primary btn-lg font-bold" onclick={spinWheel} disabled={isSpinning}>
-          {isSpinning ? 'Spinning...' : 'SPIN THE WHEEL!'}
+        <button class="btn-spin" onclick={spinWheel} disabled={isSpinning}>
+          {isSpinning ? 'Spinning…' : 'Spin'}
         </button>
 
         <!-- Provably Fair badge -->
-        <div class="flex items-center gap-2 text-xs text-base-content/50">
+        <div class="flex items-center gap-2">
           {#if pfServerAvailable}
-            <span
-              class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-success/10 text-success border border-success/20 font-mono"
-              title="Server seed hash committed before this spin"
-            >
+            <span class="badge-fair" title="Server seed hash committed before this spin">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-3 w-3"
@@ -375,16 +386,17 @@
               Provably Fair
             </span>
             {#if pfSession}
-              <span class="font-mono opacity-60" title="SHA-256 hash of the server seed">
+              <span
+                class="text-xs text-base-content/30 font-mono"
+                title="SHA-256 hash of the server seed"
+              >
                 {truncateHash(pfSession.serverSeedHash)}
               </span>
             {:else if pfSessionLoading}
-              <span class="loading loading-dots loading-xs"></span>
+              <span class="loading loading-dots loading-xs opacity-40"></span>
             {/if}
           {:else}
-            <span
-              class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-warning/10 text-warning border border-warning/20"
-            >
+            <span class="badge-offline">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-3 w-3"
@@ -397,14 +409,15 @@
                   clip-rule="evenodd"
                 />
               </svg>
-              Server offline — client random
+              Server offline
             </span>
           {/if}
         </div>
       </div>
     </div>
 
-    <div class="card bg-base-200 shadow-xl p-6 w-full max-w-sm">
+    <!-- Right: Control Panel -->
+    <div class="card-sharp p-6 w-full max-w-sm">
       <WheelSelector
         {wheels}
         bind:currentWheelId
@@ -447,9 +460,15 @@
 {/if}
 
 {#if toastMessage}
-  <div class="toast toast-top toast-center z-50">
-    <div class="alert {toastType === 'error' ? 'alert-error' : 'alert-success'}">
-      <span>{toastMessage}</span>
+  <div class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+    <div
+      class="px-4 py-2.5 rounded text-sm font-medium border-2 bg-white shadow-lg"
+      style="font-family: var(--font-body);
+        {toastType === 'error'
+        ? 'border-color: #e8003d; color: #e8003d;'
+        : 'border-color: #12a150; color: #12a150;'}"
+    >
+      {toastMessage}
     </div>
   </div>
 {/if}

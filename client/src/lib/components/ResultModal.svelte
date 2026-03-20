@@ -29,48 +29,28 @@
 </script>
 
 <div
-  class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-gold"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop-clean"
   role="dialog"
   aria-modal="true"
   tabindex="-1"
   use:trapFocus
 >
-  <!-- Modal box -->
-  <div
-    class="relative w-full max-w-md rounded-2xl overflow-hidden"
-    style="background: #111318; border: 1px solid rgba(201,152,58,0.25); box-shadow: 0 0 80px rgba(201,152,58,0.12), 0 25px 60px rgba(0,0,0,0.7);"
-  >
-    <!-- Gold top accent -->
-    <div
-      class="h-1 w-full"
-      style="background: linear-gradient(to right, transparent, #C9983A 30%, #F0D080 50%, #C9983A 70%, transparent);"
-    ></div>
+  <div class="card-sharp w-full max-w-md overflow-hidden">
+    <!-- Pink top stripe -->
+    <div class="h-1.5 w-full bg-primary"></div>
 
-    <div class="p-8 text-center">
-      <!-- Title -->
-      <p class="text-xs font-mono tracking-[0.4em] uppercase text-primary/40 mb-3">
-        ✦ &nbsp; ✦ &nbsp; ✦
-      </p>
-      <h3
-        class="uppercase tracking-[0.18em] text-base-content/50 mb-7 text-sm font-medium"
-        style="font-family: var(--font-display);"
-      >
-        The Wheel Speaks
-      </h3>
+    <div class="p-8">
+      <!-- Label -->
+      <p class="label-section mb-4">we have a winner</p>
 
-      <!-- Winner display -->
+      <!-- Winner name -->
       <div
-        class="relative rounded-xl p-8 mb-7 overflow-hidden"
-        style="background: rgba(26,29,38,0.6); border: 1px solid rgba(201,152,58,0.1);"
+        class="rounded mb-6 p-6 text-center"
+        style="background: {winningSegment?.color}15; border: 2px solid {winningSegment?.color}40;"
       >
-        <!-- Color glow -->
-        <div
-          class="absolute inset-0 opacity-8 pointer-events-none"
-          style="background: radial-gradient(ellipse at center, {winningSegment?.color} 0%, transparent 70%);"
-        ></div>
         <p
-          class="text-5xl font-bold break-words relative z-10 leading-tight"
-          style="font-family: var(--font-display); color: {winningSegment?.color}; text-shadow: 0 0 30px {winningSegment?.color}55, 0 2px 6px rgba(0,0,0,0.6);"
+          class="text-4xl font-extrabold break-words leading-tight"
+          style="font-family: var(--font-display); color: {winningSegment?.color};"
         >
           {winningSegment?.text}
         </p>
@@ -78,9 +58,9 @@
 
       <!-- Provably Fair section -->
       {#if pfResult}
-        <div class="mb-7 text-left">
+        <div class="mb-6">
           <button
-            class="flex items-center gap-2 w-full text-xs font-mono text-success/60 hover:text-success/80 transition-colors mb-2"
+            class="flex items-center gap-2 w-full text-xs font-medium text-success hover:text-success/80 transition-colors mb-2"
             onclick={() => (showPfDetails = !showPfDetails)}
           >
             <svg
@@ -116,44 +96,29 @@
 
           {#if showPfDetails}
             <div
-              class="rounded-xl p-4 text-xs font-mono space-y-3"
-              style="background: rgba(26,29,38,0.8); border: 1px solid rgba(201,152,58,0.1);"
+              class="bg-base-300 rounded p-4 text-xs font-mono space-y-3 border border-base-content/10"
             >
               <div>
-                <p class="text-primary/40 font-sans text-xs uppercase tracking-widest mb-1">
-                  Server Seed
-                </p>
-                <p class="break-all text-base-content/60">{pfResult.serverSeed}</p>
+                <p class="label-section mb-1 font-sans text-[0.6rem]">Server Seed</p>
+                <p class="break-all text-base-content/70">{pfResult.serverSeed}</p>
               </div>
               <div>
-                <p class="text-primary/40 font-sans text-xs uppercase tracking-widest mb-1">
-                  Server Seed Hash
-                </p>
-                <p class="break-all text-base-content/40">{pfResult.serverSeedHash}</p>
+                <p class="label-section mb-1 font-sans text-[0.6rem]">Server Seed Hash</p>
+                <p class="break-all text-base-content/50">{pfResult.serverSeedHash}</p>
               </div>
               <div>
-                <p class="text-primary/40 font-sans text-xs uppercase tracking-widest mb-1">
-                  Client Seed
-                </p>
-                <p class="break-all text-base-content/60">{pfResult.clientSeed}</p>
+                <p class="label-section mb-1 font-sans text-[0.6rem]">Client Seed</p>
+                <p class="break-all text-base-content/70">{pfResult.clientSeed}</p>
               </div>
               <div>
-                <p class="text-primary/40 font-sans text-xs uppercase tracking-widest mb-1">
-                  Nonce
-                </p>
+                <p class="label-section mb-1 font-sans text-[0.6rem]">Nonce</p>
                 <p>{pfResult.nonce}</p>
               </div>
-              <div class="pt-3 border-t border-white/5">
-                <p class="font-sans text-base-content/35 text-xs mb-3 leading-relaxed">
+              <div class="pt-2 border-t border-base-content/10">
+                <p class="font-sans text-base-content/40 text-xs mb-2 leading-relaxed">
                   HMAC-SHA256(serverSeed, clientSeed:nonce) mod segments → index {pfResult.resultIndex}
                 </p>
-                <button
-                  class="text-xs font-mono border border-success/25 text-success/60 px-3 py-1.5 rounded
-                         hover:border-success/45 hover:text-success/80 disabled:opacity-30
-                         disabled:cursor-not-allowed transition-all duration-150"
-                  onclick={onverify}
-                  disabled={pfVerifying}
-                >
+                <button class="btn-ghost-sm text-xs" onclick={onverify} disabled={pfVerifying}>
                   {#if pfVerifying}
                     <span class="loading loading-spinner loading-xs mr-1"></span>Verifying…
                   {:else}
@@ -163,9 +128,9 @@
 
                 {#if pfVerifyResult !== null}
                   <div
-                    class="mt-3 p-2.5 rounded font-sans text-xs {pfVerifyResult.valid
-                      ? 'bg-success/8 text-success/80 border border-success/15'
-                      : 'bg-error/8 text-error/80 border border-error/15'}"
+                    class="mt-2 p-2 rounded font-sans text-xs border {pfVerifyResult.valid
+                      ? 'bg-success/8 text-success border-success/20'
+                      : 'bg-error/8 text-error border-error/20'}"
                   >
                     {#if pfVerifyResult.valid}
                       ✓ Result verified — this spin is provably fair.
@@ -196,7 +161,6 @@
     </div>
   </div>
 
-  <!-- Backdrop click -->
   <button
     class="absolute inset-0 -z-10 w-full h-full border-none bg-transparent cursor-default"
     aria-label="Close modal"

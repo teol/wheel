@@ -62,32 +62,26 @@
 
 <!-- Wheel name -->
 <div class="mb-5">
-  <label
-    for="wheel-name-input"
-    class="block text-xs text-primary/50 font-mono uppercase tracking-widest mb-1.5"
-    >Wheel Name</label
-  >
+  <label for="wheel-name-input" class="label-section block mb-1.5">Wheel Name</label>
   <input
     id="wheel-name-input"
     type="text"
-    class="input-elegant w-full px-3 py-2.5 rounded-lg text-base font-semibold"
-    style="font-family: var(--font-display); font-size: 1.05rem;"
+    class="input-sharp w-full px-3 py-2.5 text-base font-semibold"
+    style="font-family: var(--font-display);"
     bind:value={wheel.name}
     disabled={isSpinning}
     placeholder="Wheel Name"
   />
 </div>
 
-<div class="divider-gold"></div>
+<div class="divider-thin"></div>
 
 <!-- Section header -->
-<div class="flex items-center justify-between mb-4">
-  <h2 class="section-title">Options</h2>
+<div class="flex items-center justify-between mb-3">
+  <h2 class="label-section">Options</h2>
   <div class="flex gap-1.5">
     <button
-      class="px-2.5 py-1 rounded text-xs border border-base-content/10 text-base-content/40
-             hover:border-primary/25 hover:text-primary/70 disabled:opacity-30
-             disabled:cursor-not-allowed transition-all duration-150"
+      class="btn-ghost-sm px-2 py-1"
       onclick={shuffleSegments}
       disabled={isSpinning}
       aria-label="Shuffle"
@@ -109,9 +103,7 @@
       </svg>
     </button>
     <button
-      class="px-2.5 py-1 rounded text-xs border border-base-content/10 text-base-content/40
-             hover:border-primary/25 hover:text-primary/70 disabled:opacity-30
-             disabled:cursor-not-allowed transition-all duration-150"
+      class="btn-ghost-sm px-2 py-1"
       onclick={sortSegmentsAsc}
       disabled={isSpinning}
       aria-label="Order ASC"
@@ -141,74 +133,59 @@
     type="text"
     bind:value={newSegmentText}
     placeholder="Add new option..."
-    class="input-elegant flex-1 px-3 py-2 rounded-lg text-sm"
+    class="input-sharp flex-1 px-3 py-2 text-sm"
     onkeypress={handleKeypress}
     disabled={isSpinning}
   />
-  <button
-    class="px-4 py-2 rounded-lg text-sm font-medium border border-primary/25 text-primary/80
-           bg-primary/8 hover:bg-primary/15 hover:border-primary/45 hover:text-primary
-           disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-150"
-    onclick={addSegment}
-    disabled={isSpinning}
-  >
-    Add
-  </button>
+  <button class="btn-ghost-sm px-4" onclick={addSegment} disabled={isSpinning}> Add </button>
 </div>
 
 <!-- Segment list -->
 <ul class="space-y-1.5 max-h-60 overflow-y-auto pr-1">
   {#each wheel.segments as segment (segment.id)}
-    <li class="segment-item">
+    <li class="segment-row">
       <div class="flex items-center gap-2.5 flex-1 min-w-0">
-        <div class="relative flex-shrink-0">
+        <div class="relative flex-shrink-0 w-5 h-5">
           <input
             type="color"
             bind:value={segment.color}
-            class="w-6 h-6 rounded-full cursor-pointer border-0 p-0 bg-transparent opacity-0 absolute inset-0"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             disabled={isSpinning}
           />
           <div
-            class="w-6 h-6 rounded-full flex-shrink-0 ring-1 ring-black/20 pointer-events-none"
+            class="w-5 h-5 rounded-full ring-1 ring-black/10 pointer-events-none"
             style="background-color: {segment.color};"
           ></div>
         </div>
         <input
           type="text"
           bind:value={segment.text}
-          class="bg-transparent border-none outline-none flex-1 w-full text-sm font-medium text-base-content/90
-                 placeholder-base-content/30 disabled:opacity-40 disabled:cursor-not-allowed min-w-0"
+          class="bg-transparent border-none outline-none flex-1 w-full text-sm font-medium text-base-content
+                 disabled:opacity-40 disabled:cursor-not-allowed min-w-0"
           disabled={isSpinning}
         />
       </div>
       <button
-        class="text-base-content/20 hover:text-error/70 transition-colors duration-150 flex-shrink-0 p-1 -mr-1
-               disabled:opacity-20 disabled:cursor-not-allowed text-xs"
+        class="text-base-content/25 hover:text-error transition-colors duration-150 flex-shrink-0 p-0.5
+               disabled:opacity-20 disabled:cursor-not-allowed text-xs leading-none"
         onclick={() => removeSegment(segment.id)}
         disabled={isSpinning}
-        aria-label="Remove"
+        aria-label="Remove">✕</button
       >
-        ✕
-      </button>
     </li>
   {/each}
   {#if wheel.segments.length === 0}
-    <li
-      class="text-center py-6 text-base-content/25 text-sm italic"
-      style="font-family: var(--font-display);"
-    >
-      No options added yet
-    </li>
+    <li class="text-center py-6 text-base-content/30 text-sm">No options added yet</li>
   {/if}
 </ul>
 
 <!-- Provably Fair section -->
 {#if pfServerAvailable}
-  <div class="mt-5 pt-4 border-t border-primary/8">
-    <p class="text-xs text-primary/45 font-mono uppercase tracking-widest mb-1.5">Client Seed</p>
+  <div class="mt-5 pt-4 border-t border-base-300">
+    <p class="label-section mb-1.5">Client Seed</p>
     <p class="font-mono text-xs text-base-content/40 break-all leading-relaxed">{pfClientSeed}</p>
     <button
-      class="mt-2 text-xs text-base-content/25 hover:text-primary/50 font-mono transition-colors duration-150
+      class="mt-2 text-xs text-base-content/30 hover:text-primary font-medium transition-colors duration-150
              disabled:opacity-20 disabled:cursor-not-allowed"
       onclick={() => (pfClientSeed = generateClientSeed())}
       disabled={isSpinning}

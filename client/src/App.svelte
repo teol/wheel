@@ -342,33 +342,29 @@
   class="relative z-10 min-h-screen text-base-content flex flex-col items-center px-4 pt-10 pb-20"
 >
   <!-- Header -->
-  <header class="text-center mb-10 select-none">
-    <p class="text-xs tracking-[0.5em] uppercase font-mono text-primary/40 mb-4">
-      ✦ &nbsp; ✦ &nbsp; ✦
-    </p>
+  <header class="w-full max-w-4xl mb-10">
+    <p class="label-section mb-2">★ fortune wheel</p>
     <h1
-      class="title-gold text-5xl md:text-6xl font-bold tracking-[0.1em] uppercase leading-none mb-3"
+      class="text-5xl md:text-6xl font-extrabold leading-[1.05] tracking-tight"
+      style="font-family: var(--font-display);"
     >
-      Fortune Wheel
+      Spin your<br /><span class="text-primary">fate.</span>
     </h1>
-    <p class="text-xs text-base-content/30 tracking-[0.3em] uppercase font-light mt-3">
-      Spin your fate
-    </p>
-    <div class="divider-gold w-48 mx-auto mt-5"></div>
+    <div class="divider-thin mt-6"></div>
   </header>
 
   <!-- Main layout -->
   <div class="flex flex-col md:flex-row gap-8 w-full max-w-4xl justify-center items-start">
     <!-- Left: Wheel + Spin -->
-    <div class="flex flex-col items-center">
+    <div class="flex flex-col items-center gap-5">
       <WheelCanvas
         segments={wheels[currentWheelIndex]?.segments ?? []}
         bind:canvasElement={canvasEl}
       />
 
-      <div class="flex flex-col items-center gap-4 -mt-2">
+      <div class="flex flex-col items-center gap-3">
         <button class="btn-spin" onclick={spinWheel} disabled={isSpinning}>
-          {isSpinning ? '— Spinning —' : 'Spin the Wheel'}
+          {isSpinning ? 'Spinning…' : 'Spin'}
         </button>
 
         <!-- Provably Fair badge -->
@@ -391,13 +387,13 @@
             </span>
             {#if pfSession}
               <span
-                class="font-mono text-xs text-base-content/25"
+                class="text-xs text-base-content/30 font-mono"
                 title="SHA-256 hash of the server seed"
               >
                 {truncateHash(pfSession.serverSeedHash)}
               </span>
             {:else if pfSessionLoading}
-              <span class="loading loading-dots loading-xs text-primary/40"></span>
+              <span class="loading loading-dots loading-xs opacity-40"></span>
             {/if}
           {:else}
             <span class="badge-offline">
@@ -421,7 +417,7 @@
     </div>
 
     <!-- Right: Control Panel -->
-    <div class="card-gold rounded-xl p-6 w-full max-w-sm">
+    <div class="card-sharp p-6 w-full max-w-sm">
       <WheelSelector
         {wheels}
         bind:currentWheelId
@@ -464,12 +460,13 @@
 {/if}
 
 {#if toastMessage}
-  <div class="fixed top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+  <div class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
     <div
-      class="px-5 py-3 rounded-lg font-mono text-sm tracking-wide border shadow-2xl
+      class="px-4 py-2.5 rounded text-sm font-medium border-2 bg-white shadow-lg"
+      style="font-family: var(--font-body);
         {toastType === 'error'
-        ? 'bg-error/15 text-error border-error/30'
-        : 'bg-success/15 text-success border-success/30'}"
+        ? 'border-color: #e8003d; color: #e8003d;'
+        : 'border-color: #12a150; color: #12a150;'}"
     >
       {toastMessage}
     </div>

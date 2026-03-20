@@ -44,6 +44,7 @@
 
   let currentRotation = $state(0);
   let isSpinning = $state(false);
+  let currentHighlightIndex = $state(0);
   let showResultModal = $state(false);
   let winningSegment = $state<Segment | null>(null);
 
@@ -156,7 +157,9 @@
           nonce: data.nonce,
           resultIndex: data.resultIndex,
         };
-        targetRotation = computeTargetRotation(currentRotation, data.resultIndex, segments.length);
+        // Offset by -90° so the pointer at 3 o'clock (right side) resolves correctly
+        targetRotation =
+          computeTargetRotation(currentRotation - 90, data.resultIndex, segments.length) + 90;
       } catch (e) {
         console.error('Provably fair spin failed, falling back to client-side random:', e);
         showToast('Provably fair spin failed. Result uses client-side randomness.', 'error');
@@ -178,15 +181,17 @@
       ease: 'power4.out',
       onUpdate: () => {
         const currentAnimRotation = gsap.getProperty(canvasEl!, 'rotation') as number;
-        const currentIndex = getIndexFromRotation(currentAnimRotation, segments.length);
+        const currentIndex = getIndexFromRotation(currentAnimRotation - 90, segments.length);
         if (lastTickIndex !== -1 && currentIndex !== lastTickIndex) playTickSound();
         lastTickIndex = currentIndex;
+        currentHighlightIndex = currentIndex;
       },
       onComplete: () => {
         isSpinning = false;
         playTadaSound();
 
-        const winningIndex = getIndexFromRotation(currentRotation, segments.length);
+        const winningIndex = getIndexFromRotation(currentRotation - 90, segments.length);
+        currentHighlightIndex = winningIndex;
         winningSegment = segments[winningIndex];
         pfResult = spinPfResult;
         showResultModal = true;
@@ -329,6 +334,15 @@
     };
   });
 
+  // Keep pointer colour in sync when wheel changes or app loads (not during a spin)
+  $effect(() => {
+    if (isSpinning) return;
+    const segs = wheels[currentWheelIndex]?.segments ?? [];
+    if (segs.length > 0) {
+      currentHighlightIndex = getIndexFromRotation(currentRotation - 90, segs.length);
+    }
+  });
+
   $effect(() => {
     localStorage.setItem('wheel-spin-logs', JSON.stringify(spinLogs));
   });
@@ -346,6 +360,8 @@
       <WheelCanvas
         segments={wheels[currentWheelIndex]?.segments ?? []}
         bind:canvasElement={canvasEl}
+        currentSegmentIndex={currentHighlightIndex}
+        onspin={spinWheel}
       />
 
       <div class="flex flex-col items-center gap-3">
